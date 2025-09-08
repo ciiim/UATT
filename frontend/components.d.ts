@@ -8,6 +8,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ACard: typeof import('ant-design-vue/es')['Card']
+    ACardGrid: typeof import('ant-design-vue/es')['CardGrid']
+    ACol: typeof import('ant-design-vue/es')['Col']
     ADivider: typeof import('ant-design-vue/es')['Divider']
     AFloatButton: typeof import('ant-design-vue/es')['FloatButton']
     ALayout: typeof import('ant-design-vue/es')['Layout']
@@ -15,10 +18,15 @@ declare module 'vue' {
     ALayoutFooter: typeof import('ant-design-vue/es')['LayoutFooter']
     ALayoutHeader: typeof import('ant-design-vue/es')['LayoutHeader']
     ALayoutSider: typeof import('ant-design-vue/es')['LayoutSider']
+    ARow: typeof import('ant-design-vue/es')['Row']
+    ASegmented: typeof import('ant-design-vue/es')['Segmented']
     HeaderToolBar: typeof import('./src/components/HeaderToolBar.vue')['default']
     LeftSiderMenu: typeof import('./src/components/LeftSiderMenu.vue')['default']
     MainContent: typeof import('./src/components/MainContent.vue')['default']
     MainFrame: typeof import('./src/components/MainFrame.vue')['default']
+    ModuleList: typeof import('./src/components/right_sider/ModuleList.vue')['default']
+    PropPage: typeof import('./src/components/right_sider/PropPage.vue')['default']
+    RightSider: typeof import('./src/components/RightSider.vue')['default']
     RightSiderProp: typeof import('./src/components/RightSiderProp.vue')['default']
     TestModule: typeof import('./src/components/TestModule.vue')['default']
   }

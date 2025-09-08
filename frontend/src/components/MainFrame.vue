@@ -8,11 +8,12 @@
 				<menu-unfold-outlined v-if="leftCollapsed" class="left-trigger" @click="() => (leftCollapsed = !leftCollapsed)" />
 				<menu-fold-outlined v-else class="left-trigger" @click="() => (leftCollapsed = !leftCollapsed)" />
 
+
+				<HeaderToolBar></HeaderToolBar>
+
 				<!-- 右菜单折叠按钮 -->
 				<menu-fold-outlined v-if="rightCollapsed" class="right-trigger" @click="() => (rightCollapsed = !rightCollapsed)" />
 				<menu-unfold-outlined v-else class="right-trigger" @click="() => (rightCollapsed = !rightCollapsed)" />
-
-				
 
 			</a-layout-header>
 
@@ -21,8 +22,10 @@
 			</a-layout-content>
 		</a-layout>
 
-		<a-layout-sider :style="siderStyle" breakpoint="lg" collapsed-width="0" :trigger="null" v-model:collapsed="rightCollapsed" collapsible
-			reverseArrow>Sider</a-layout-sider>
+		<a-layout-sider :width="300" :style="siderStyle" breakpoint="lg" collapsed-width="0" :trigger="null" v-model:collapsed="rightCollapsed" collapsible
+			reverseArrow>
+			<RightSider></RightSider>
+		</a-layout-sider>
 	</a-layout>
 </template>
 
@@ -34,6 +37,8 @@ import {
 	MenuUnfoldOutlined,
 	MenuFoldOutlined,
 } from '@ant-design/icons-vue';
+import HeaderToolBar from './HeaderToolBar.vue';
+import RightSider from './RightSider.vue';
 
 const leftCollapsed = ref<boolean>(false);
 const rightCollapsed = ref<boolean>(false);
@@ -41,7 +46,7 @@ const rightCollapsed = ref<boolean>(false);
 const siderStyle: CSSProperties = {
 	textAlign: 'center',
 	color: '#fff',
-	backgroundColor: '#3ba0e9'
+	backgroundColor: '#3ba0e9',
 }
 
 
@@ -58,7 +63,7 @@ const headerStyle: CSSProperties = {
 const contentStyle: CSSProperties = {
 	textAlign: 'center',
 	color: '#fff',
-	backgroundColor: '#108ee9',
+	backgroundColor: 'whitegray',
 	overflow: 'auto',
 	flex: 1
 }
@@ -85,7 +90,6 @@ body,
 }
 
 .right-trigger {
-	flex: 1;
-	text-align: right;
+	margin-left: auto;
 }
 </style>
