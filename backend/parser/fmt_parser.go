@@ -3,7 +3,6 @@ package parser
 import (
 	"bsd_testtool/backend/context"
 	"encoding/hex"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,6 +26,7 @@ func (s *StringFmt) Sprintf(format string, ctx *context.Context) string {
 				arrIndexEnd, _ = strconv.Atoi(arrIndexStrings[1])
 			}
 			arrIndexBegin, _ = strconv.Atoi(arrIndexStrings[0])
+		}
 		switch idx {
 		case "0":
 			return ctx.LastModuleName
