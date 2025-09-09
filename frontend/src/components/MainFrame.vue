@@ -18,13 +18,14 @@
 			</a-layout-header>
 
 			<a-layout-content :style="contentStyle">
-				<MainContent></MainContent>
+				<MainContent 
+      			:moduleLibrary="moduleLibrary"></MainContent>
 			</a-layout-content>
 		</a-layout>
 
 		<a-layout-sider :width="300" :style="siderStyle" breakpoint="lg" collapsed-width="0" :trigger="null" v-model:collapsed="rightCollapsed" collapsible
 			reverseArrow>
-			<RightSider></RightSider>
+			<RightSider :module-library="moduleLibrary"></RightSider>
 		</a-layout-sider>
 	</a-layout>
 </template>
@@ -49,7 +50,6 @@ const siderStyle: CSSProperties = {
 	backgroundColor: '#3ba0e9',
 }
 
-
 const headerStyle: CSSProperties = {
 	display: "flex",
 	alignItems: 'center',
@@ -60,6 +60,8 @@ const headerStyle: CSSProperties = {
 	backgroundColor: '#7dbcea',
 }
 
+
+
 const contentStyle: CSSProperties = {
 	textAlign: 'center',
 	color: '#fff',
@@ -67,6 +69,16 @@ const contentStyle: CSSProperties = {
 	overflow: 'auto',
 	flex: 1
 }
+
+
+const moduleLibrary = ref([
+  {name: '发送', modUid: 1},
+  {name: '接收', modUid: 2},
+  {name: 'PRINT', modUid: 3},
+  {name: 'IF', modUid: 4},
+  {name: 'ELSE', modUid: 5},
+  {name: 'FOR', modUid: 6},
+])
 
 </script>
 

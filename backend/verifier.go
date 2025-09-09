@@ -36,7 +36,7 @@ type BytesAdd struct {
 
 func (b BytesAdd) Verify(command []byte) []byte {
 	checksum := byte(0)
-	for i := 0; i < len(command); i++ {
+	for i := range command {
 		checksum += command[i]
 	}
 	return []byte{checksum}

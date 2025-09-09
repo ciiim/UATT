@@ -1,3 +1,3 @@
 <template>
-    prop
+    <div>prop</div>
 </template>
