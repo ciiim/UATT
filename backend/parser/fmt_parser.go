@@ -23,18 +23,15 @@ func (s *StringFmt) Sprintf(format string, ctx *context.Context) string {
 			arrFmtStrings := strings.Split(idx, ":")
 			idx = arrFmtStrings[0]
 			arrIndexStrings := strings.Split(arrFmtStrings[1], ",")
-			fmt.Printf("arrIndexStrings: %v\n", arrIndexStrings)
 			if len(arrIndexStrings) == 2 {
 				arrIndexEnd, _ = strconv.Atoi(arrIndexStrings[1])
 			}
 			arrIndexBegin, _ = strconv.Atoi(arrIndexStrings[0])
-			fmt.Printf("begin %v, end: %v\n", arrIndexBegin, arrIndexEnd)
-		}
 		switch idx {
 		case "0":
 			return ctx.LastModuleName
 		case "1":
-			if arrIndexBegin >= len(ctx.LastSerialBuffer) || arrIndexEnd >= len(ctx.LastSerialBuffer) {
+			if arrIndexBegin > len(ctx.LastSerialBuffer)-1 || arrIndexEnd > len(ctx.LastSerialBuffer)-1 {
 				return "[index out of range]"
 			}
 			if arrIndexBegin != -1 && arrIndexEnd == -1 {
