@@ -3,67 +3,75 @@ package bsd_testtool
 import (
 	"errors"
 
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
-type SerialManager struct {
-	commandHead []byte
-	port        *serial.Port
-	verifier    *Verifier
+type Serial struct {
+	port     serial.Port
+	mode     serial.Mode
+	portName string
 }
 
-func NewSerialManager(verifier *Verifier, head []byte) *SerialManager {
-	return &SerialManager{
-		commandHead: head,
-		verifier:    verifier,
-	}
+var ErrSerialNotOpen error = errors.New("serial not open")
+
+var GlobalSerial Serial
+
+func (s *Serial) GetAllPort() ([]string, error) {
+	return serial.GetPortsList()
 }
 
-func (s *SerialManager) Open(name string, baud int) error {
-	port, err := serial.OpenPort(&serial.Config{
-		Name: name,
-		Baud: baud,
-	})
+func (s *Serial) GetMode() *serial.Mode {
+	return &s.mode
+}
+
+func (s *Serial) SetModeS(m *serial.Mode) {
+	s.mode.BaudRate = m.BaudRate
+	s.mode.DataBits = m.DataBits
+	s.mode.Parity = m.Parity
+	s.mode.StopBits = m.StopBits
+}
+
+func (s *Serial) SetMode(baudRate int, dataBits int, parity serial.Parity, stopBits serial.StopBits) {
+	s.mode.BaudRate = baudRate
+	s.mode.DataBits = dataBits
+	s.mode.Parity = parity
+	s.mode.StopBits = stopBits
+}
+
+func (s *Serial) SelectPort(port string) {
+	s.portName = port
+}
+
+func (s *Serial) OpenSerial() error {
+	p, err := serial.Open(s.portName, &s.mode)
 	if err != nil {
 		return err
 	}
-	s.port = port
+	s.port = p
 	return nil
 }
 
-func (s *SerialManager) WriteWithVerify(body []byte) (int, error) {
-	// add head
-	body = append(s.commandHead, body...)
-	// add verify
-	verifyBytes := s.verifier.Verify(body)
-	body = append(body, verifyBytes...)
-	return s.port.Write(body)
+func (s *Serial) CloseSerial() error {
+	if s.port == nil {
+		return ErrSerialNotOpen
+	}
+	if err := s.port.Close(); err != nil {
+		return err
+	}
+	s.port = nil
+	return nil
 }
 
-func (s *SerialManager) ReadWithVerify(body []byte) (int, error) {
-	_, err := s.port.Read(body)
-	if err != nil {
-		return 0, err
+func (s *Serial) Write(buffer []byte) (int, error) {
+	if s.port == nil {
+		return 0, ErrSerialNotOpen
 	}
-
-	// verify head
-	if string(body[:len(s.commandHead)]) != string(s.commandHead) {
-		return 0, errors.New("head verify failed")
-	}
-
-	// verify body
-	dataLen := len(body)
-	verifyLen := s.verifier.Len()
-	recvVerifyBytes := body[dataLen-verifyLen:]
-	body = body[:dataLen-verifyLen]
-	verifyBytes := s.verifier.Verify(body)
-	if string(verifyBytes) != string(recvVerifyBytes) {
-		return 0, errors.New("verify failed")
-	}
-
-	return dataLen, nil
+	return s.port.Write(buffer)
 }
 
-func (s *SerialManager) Close() error {
-	return s.port.Close()
+func (s *Serial) Read(buffer []byte) (int, error) {
+	if s.port == nil {
+		return 0, ErrSerialNotOpen
+	}
+	return s.port.Read(buffer)
 }

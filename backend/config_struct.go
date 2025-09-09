@@ -1,58 +1,29 @@
 package bsd_testtool
 
-type TestCaseFile struct {
-	Name       string `toml:"name" mapstructure:"name"`
-	ReqContent string `toml:"req_content" mapstructure:"req_content"`
-	AckContent string `toml:"ack_content" mapstructure:"ack_content"`
-}
-
-type TestItemFile struct {
-	Name       string         `toml:"name" mapstructure:"name"`
-	ReqPattern string         `toml:"req_pattern" mapstructure:"req_pattern"`
-	ExpectAck  string         `toml:"expect_ack" mapstructure:"expect_ack"`
-	TestCases  []TestCaseFile `toml:"test_cases" mapstructure:"test_cases"`
-	Timeout    int            `toml:"timeout" mapstructure:"timeout"`
-}
-
-type ManagerConfig struct {
-	Baud        int            `toml:"baud" mapstructure:"baud"`
-	VerifyType  int            `toml:"verify_type" mapstructure:"verify_type"`
-	CommandHead string         `toml:"command_head" mapstructure:"command_head"`
-	TestItems   []TestItemFile `toml:"test_items" mapstructure:"test_items"`
-}
-
-/*----*/
-/*----*/
-
-type config struct {
-	Baud        int
-	VerifyType  int
-	CommandHead []byte
-}
-
-// case自定义字节
-type testCustomIndex struct {
-	Index       int
-	CommandByte byte
-}
-
-type testCase struct {
-	Name             string
-	ReqContent       []testCustomIndex
-	ExpectAckContent []testCustomIndex
-}
-
-type testItem struct {
-	Name string
-	// 指令模板
-	ReqPattern []byte
-	// 期望应答
-	ExpectAck []byte
-
-	// 可编辑的索引
-	EditableReqIndex []int
-	EditableAckIndex []int
-	TestCases        []testCase
-
-	Timeout int
+type Config struct {
+	AppName      string `json:"AppName"`
+	SerialConfig struct {
+		BaudRate int    `json:"BaudRate"`
+		DataBits int    `json:"DataBits"`
+		Parity   string `json:"Parity"`
+		StopBits int    `json:"StopBits"`
+	} `json:"SerialConfig"`
+	DebugEnable       bool   `json:"DebugEnable"`
+	LogEnable         bool   `json:"LogEnable"`
+	LogExportEnable   bool   `json:"LogExportEnable"`
+	LogExportLoaction string `json:"LogExportLoaction"`
+	Actions           []struct {
+		// 模块实例UID
+		ModuleUID int `json:"ModuleUID"`
+		// 模块类型
+		ModuleType string `json:"ModuleType"`
+		// 模块类型ID
+		ModuleTypeID int `json:"ModuleTypeID"`
+		// 模块名 自定义
+		Name string `json:"Name"`
+		// 是否是断点
+		BreakPoint bool `json:"BreakPoint"`
+		// 模块独有属性
+		TypeFeatureField any `json:"TypeFeatureField"`
+	}
 }

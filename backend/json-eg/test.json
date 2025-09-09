@@ -1,6 +1,11 @@
 {
     "AppName": "Test",
-    "DefaultBaudrate": 9600,
+    "SerialConfig": {
+        "BaudRate": 9600,
+        "DataBits": 8,
+        "Parity": "None",
+        "StopBits": 1
+    },
     "DebugEnable": false,
     "LogEnable": false,
     "LogExportEnable": false,
