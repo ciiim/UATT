@@ -1,4 +1,4 @@
-package bsd_testtool
+package parser
 
 import (
 	"encoding/hex"

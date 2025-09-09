@@ -1,9 +1,7 @@
-package bsd_testtool
+package modules
 
-// Module Type
 const (
-	subContainerMT = 0xFF
-	printMT        = 0xFE
+	printMT = 90
 
 	gotoLabelMT = 0x00
 	gotoMT      = 0x01
@@ -20,6 +18,3 @@ const (
 
 	exitMT = 0x08
 )
-
-type IModule interface {
-}
