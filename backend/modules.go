@@ -23,6 +23,8 @@ const (
 	SendMT    ModuleTypeID = 1
 	ReceiveMT ModuleTypeID = 2
 
+	DeclareMT ModuleTypeID = 23
+
 	IfMT   ModuleTypeID = 24
 	ElseMT ModuleTypeID = 25
 
@@ -48,6 +50,9 @@ const (
 type ModuleTypeFeatureFieldBase any
 
 type ModuleBase struct {
+	// 在数组内的下标
+	Index int
+
 	// 模块实例UID
 	ModuleUID int
 	// 模块类型

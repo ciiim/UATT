@@ -15,8 +15,6 @@ type App struct {
 	// 存放位置
 	appFileLocation string
 
-	moduleMap map[ModuleUID]ModuleBase
-
 	config *AppConfig
 }
 
@@ -80,10 +78,7 @@ func (a *App) PrintConfig() {
 	}
 }
 
-// 语法检查
-// 包括IF 有没有包含ENDBLOCK
 func (a *App) StaticCheck() []error {
-
 	return nil
 }
 
