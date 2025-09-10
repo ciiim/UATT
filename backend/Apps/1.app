@@ -1,5 +1,5 @@
 {
-    "AppName": "Test",
+    "AppName": "111",
     "SerialConfig": {
         "BaudRate": 9600,
         "DataBits": 8,

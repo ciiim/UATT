@@ -1,7 +1,6 @@
-package parser
+package bsd_testtool
 
 import (
-	"bsd_testtool/backend/context"
 	"encoding/hex"
 	"regexp"
 	"strconv"
@@ -10,7 +9,7 @@ import (
 
 type StringFmt struct{}
 
-func (s *StringFmt) Sprintf(format string, ctx *context.Context) string {
+func (s *StringFmt) Sprintf(format string, ctx *ActionContext) string {
 	re := regexp.MustCompile(`\{(\d+|\d:\S+)\}`)
 	return re.ReplaceAllStringFunc(format, func(s string) string {
 		if ctx == nil {
