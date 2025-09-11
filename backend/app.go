@@ -53,6 +53,8 @@ func (a *App) PrintConfig() {
 			}
 		case *PrintModuleFeatureField:
 			fmt.Printf("PrintModuleFeatureField: %+v\n", m)
+		case *DelayModuleFeatureField:
+			fmt.Printf("DelayModuleFeatureField: %+v\n", m)
 		case *DeclareModuleFeatureField:
 			fmt.Printf("DeclareModuleFeatureField: %+v\n", m)
 		case *IfModuleFeatureField:

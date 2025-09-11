@@ -5,6 +5,8 @@ import (
 	"errors"
 )
 
+type ModuleFunc func(ctx *ActionContext, m *ModuleBase) error
+
 type ModuleTypeID int
 
 type ModuleType string
@@ -19,6 +21,7 @@ const (
 
 const (
 	PrintMT ModuleTypeID = 90
+	DelayMT ModuleTypeID = 91
 
 	SendMT    ModuleTypeID = 1
 	ReceiveMT ModuleTypeID = 2
@@ -35,7 +38,7 @@ const (
 	GotoLabelMT ModuleTypeID = 28
 	GotoMT      ModuleTypeID = 29
 
-	ChangeBaudRate ModuleTypeID = 30
+	ChangeBaudRateMT ModuleTypeID = 30
 
 	StopMT ModuleTypeID = 31
 )
@@ -65,6 +68,23 @@ type ModuleBase struct {
 	BreakPoint bool
 	// 模块独有属性
 	TypeFeatureField ModuleTypeFeatureFieldBase
+}
+
+var ModuleFuncMap map[ModuleTypeID]ModuleFunc = map[ModuleTypeID]ModuleFunc{
+	PrintMT: doPrint,
+	DelayMT: doDelay,
+
+	SendMT:    doSend,
+	ReceiveMT: doReceive,
+
+	IfMT:             doIf,
+	ElseMT:           doElse,
+	ForLabelMT:       doFor,
+	EndBlockMT:       doEndBlock,
+	GotoLabelMT:      doLabel,
+	GotoMT:           doGoto,
+	ChangeBaudRateMT: doChangeBaudRate,
+	StopMT:           doStop,
 }
 
 func (mb *ModuleBase) UnmarshalJSON(b []byte) error {

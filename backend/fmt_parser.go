@@ -7,9 +7,7 @@ import (
 	"strings"
 )
 
-type StringFmt struct{}
-
-func (s *StringFmt) Sprintf(format string, ctx *ActionContext) string {
+func FmtSprintf(format string, ctx *ActionContext) string {
 	re := regexp.MustCompile(`\{(\d+|\d:\S+)\}`)
 	return re.ReplaceAllStringFunc(format, func(s string) string {
 		if ctx == nil {

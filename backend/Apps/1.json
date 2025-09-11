@@ -41,6 +41,12 @@
             }
         },
         {
+            "ModuleUID": 1201, "ModuleType": "Debug", "ModuleTypeID": 91, "Name": "delay 500ms", "BreakPoint": false,
+            "TypeFeatureField": {
+                "DelayMs": 500
+            }
+        },
+        {
             "ModuleUID": 1300, "ModuleType": "Control", "ModuleTypeID": 24, "Name": "如果失败", "BreakPoint": false,
             "TypeFeatureField": {
                 "Condition": "{1:6} == 1"

@@ -27,6 +27,7 @@ Control 类模块
 ---
 Debug 类模块
     1. Print模块 [TypeID 90]
+    1. Delay模块 [TypeID 91]
 
 
 format定义

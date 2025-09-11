@@ -47,12 +47,6 @@ type StopModuleFeatureField struct {
 
 func unmarshalControlModule(moduleTypeID ModuleTypeID, b []byte) (any, error) {
 	switch moduleTypeID {
-	case PrintMT:
-		var f DeclareModuleFeatureField
-		if err := json.Unmarshal(b, &f); err != nil {
-			return nil, err
-		}
-		return &f, nil
 	case IfMT:
 		var f IfModuleFeatureField
 		if err := json.Unmarshal(b, &f); err != nil {
@@ -89,7 +83,7 @@ func unmarshalControlModule(moduleTypeID ModuleTypeID, b []byte) (any, error) {
 			return nil, err
 		}
 		return &f, nil
-	case ChangeBaudRate:
+	case ChangeBaudRateMT:
 		var f ChangeBaudRateModuleFeatureField
 		if err := json.Unmarshal(b, &f); err != nil {
 			return nil, err
@@ -105,4 +99,41 @@ func unmarshalControlModule(moduleTypeID ModuleTypeID, b []byte) (any, error) {
 	default:
 		return nil, errors.New("unsupport module")
 	}
+}
+
+func doIf(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+}
+
+func doElse(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+
+}
+
+func doEndBlock(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+
+}
+
+func doFor(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+
+}
+
+func doLabel(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+
+}
+
+func doGoto(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+
+}
+
+func doChangeBaudRate(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+}
+
+func doStop(ctx *ActionContext, m *ModuleBase) error {
+	return nil
 }

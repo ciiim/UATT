@@ -2,6 +2,7 @@ package bsd_testtool_test
 
 import (
 	bsd_testtool "bsd_testtool/backend"
+	"fmt"
 	"testing"
 )
 
@@ -17,5 +18,9 @@ func TestManagerLoadConfig(t *testing.T) {
 	if app != nil {
 		app.PrintConfig()
 	}
+
+	ae := bsd_testtool.NewActionEngine(app)
+
+	fmt.Printf("ae.PreCompile(): %v\n", ae.PreCompile())
 
 }

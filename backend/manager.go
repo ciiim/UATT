@@ -58,7 +58,7 @@ func (m *Manager) Init(appFolder string) error {
 			continue
 		}
 
-		if strings.Contains(e.Name(), ".app") {
+		if strings.Contains(e.Name(), ".json") {
 			app, err := getBasicApp(filepath.Join(appFolder, e.Name()))
 			if err != nil {
 				fmt.Printf("get app[%s] failed: %v\n", e.Name(), err)

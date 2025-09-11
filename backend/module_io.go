@@ -3,11 +3,18 @@ package bsd_testtool
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"regexp"
 )
 
-type SubModule any
+type IOSubModule interface {
+	GetUID() ModuleUID
+	SetIndex(index int)
+	GetIndex() int
+}
 
 type IOSubModuleBase struct {
+	index        int
 	ModuleTypeID int `json:"ModuleTypeID"`
 	ModuleUID    int `json:"ModuleUID"`
 }
@@ -27,7 +34,6 @@ type IOSubModuleCalc struct {
 	IOSubModuleBase
 	Mode                string `json:"Mode"`
 	CalcFunc            string `json:"CalcFunc"`
-	CalcOrder           int    `json:"CalcOrder"`
 	CalcTiming          string `json:"CalcTiming"`
 	PlaceholderBytes    []int  `json:"PlaceholderBytes"`
 	CalcInputModulesUID []int  `json:"CalcInputModulesUID"`
@@ -35,12 +41,13 @@ type IOSubModuleCalc struct {
 
 type IOSubModuleCustom struct {
 	IOSubModuleBase
-	CustomLength int `json:"CustomLength"`
+	CustomLength  int `json:"CustomLength"`
+	CustomContent int `json:"CustomContent"`
 }
 
 type IOModuleFeatureField struct {
 	TimeoutMs  int
-	SubModules []SubModule
+	SubModules []IOSubModule
 }
 
 func (i *IOModuleFeatureField) UnmarshalJSON(b []byte) error {
@@ -93,4 +100,90 @@ func (i *IOModuleFeatureField) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+func (i *IOSubModuleBase) GetUID() ModuleUID {
+	return ModuleUID(i.ModuleUID)
+}
+
+func (i *IOSubModuleBase) SetIndex(index int) {
+	i.index = index
+}
+
+func (i *IOSubModuleBase) GetIndex() int {
+	return i.index
+}
+
+type IOSubModuleCtx struct {
+	// UID map, 用来给Calc的模块提供计算来源
+	subUIDMap map[ModuleUID]IOSubModule
+
+	// Fill的模块默认放在Now里面，不依赖前后子模块。只依赖ActionEngine的上下文
+	calcNowArr []IOSubModule
+
+	// 计算时机在总长度计算完毕，Now的计算完成后，拼接各个模块的结果前
+	calcPostArr []IOSubModule
+}
+
+func doSend(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+}
+
+func doReceive(ctx *ActionContext, m *ModuleBase) error {
+	return nil
+}
+
+func (i *IOModuleFeatureField) GetContext() *IOSubModuleCtx {
+	ctx := IOSubModuleCtx{
+		subUIDMap: make(map[ModuleUID]IOSubModule),
+	}
+	for i, m := range i.SubModules {
+		ctx.subUIDMap[m.GetUID()] = m
+
+		m.SetIndex(i)
+
+		switch t := m.(type) {
+		case *IOSubModuleFill:
+			ctx.calcNowArr = append(ctx.calcNowArr, m)
+		case *IOSubModuleCalc:
+			if t.CalcTiming == "Post" {
+				ctx.calcPostArr = append(ctx.calcPostArr, m)
+			} else {
+				ctx.calcNowArr = append(ctx.calcNowArr, m)
+			}
+		}
+	}
+
+	return &ctx
+}
+
+func (fixed *IOSubModuleFixed) get(ctx *IOSubModuleCtx) []byte {
+	res := make([]byte, len(fixed.FixedContent))
+	for i, b := range fixed.FixedContent {
+		res[i] = byte(b & 0xFF)
+	}
+	return res
+}
+
+func (fill *IOSubModuleFill) get() []byte {
+	re := regexp.MustCompile(`\{(\d+|\d:\S+)\}`)
+	fmt.Printf("re.FindStringIndex(fill.UseVar): %v\n", re.FindStringIndex(fill.UseVar))
+	return
+}
+
+func (calc *IOSubModuleCalc) get() []byte {
+
+	return
+}
+
+func (custom *IOSubModuleCustom) get() (length int, res []byte) {
+	return
+}
+
+func (fill *IOSubModuleFill) fill(ctx *ActionContext) (length int, res []byte) {
+	return
+}
+
+func (calc *IOSubModuleCalc) calc(ctx *IOSubModuleCtx) (length int, res []byte) {
+	return
 }
