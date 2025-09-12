@@ -14,3 +14,15 @@ func TestFmtParse(t *testing.T) {
 		LastExecResult:   errors.New("Test Error"),
 	}))
 }
+
+func TestTokenize(t *testing.T) {
+	res, err := bsd_testtool.TestTokenize("{varA}== 0x01 || {varB} > 1 && 1 != 1")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for _, token := range res {
+		t.Logf("token:[%v]\n", token)
+	}
+}

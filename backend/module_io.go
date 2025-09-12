@@ -1,6 +1,7 @@
 package bsd_testtool
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ type IOSubModule interface {
 	GetUID() ModuleUID
 	SetIndex(index int)
 	GetIndex() int
+	getBasicInfo() (int, []byte)
 }
 
 type IOSubModuleBase struct {
@@ -41,8 +43,7 @@ type IOSubModuleCalc struct {
 
 type IOSubModuleCustom struct {
 	IOSubModuleBase
-	CustomLength  int `json:"CustomLength"`
-	CustomContent int `json:"CustomContent"`
+	CustomContent []int `json:"CustomContent"`
 }
 
 type IOModuleFeatureField struct {
@@ -123,6 +124,8 @@ type IOSubModuleCtx struct {
 
 	// 计算时机在总长度计算完毕，Now的计算完成后，拼接各个模块的结果前
 	calcPostArr []IOSubModule
+
+	subBytes [][]byte
 }
 
 func doSend(ctx *ActionContext, m *ModuleBase) error {
@@ -157,33 +160,71 @@ func (i *IOModuleFeatureField) GetContext() *IOSubModuleCtx {
 	return &ctx
 }
 
-func (fixed *IOSubModuleFixed) get(ctx *IOSubModuleCtx) []byte {
-	res := make([]byte, len(fixed.FixedContent))
+func (fixed *IOSubModuleFixed) getBasicInfo() (length int, res []byte) {
+	length = len(fixed.FixedContent)
+	res = make([]byte, length)
 	for i, b := range fixed.FixedContent {
 		res[i] = byte(b & 0xFF)
 	}
-	return res
+	return
 }
 
-func (fill *IOSubModuleFill) get() []byte {
+func (fill *IOSubModuleFill) getBasicInfo() (length int, res []byte) {
 	re := regexp.MustCompile(`\{(\d+|\d:\S+)\}`)
 	fmt.Printf("re.FindStringIndex(fill.UseVar): %v\n", re.FindStringIndex(fill.UseVar))
 	return
 }
 
-func (calc *IOSubModuleCalc) get() []byte {
-
+// 只返回占位符的长度
+func (calc *IOSubModuleCalc) getBasicInfo() (length int, res []byte) {
+	length = len(calc.PlaceholderBytes)
 	return
 }
 
-func (custom *IOSubModuleCustom) get() (length int, res []byte) {
+func (custom *IOSubModuleCustom) getBasicInfo() (length int, res []byte) {
+	length = len(custom.CustomContent)
+	res = make([]byte, length)
+	for i, b := range custom.CustomContent {
+		res[i] = byte(b)
+	}
 	return
 }
 
-func (fill *IOSubModuleFill) fill(ctx *ActionContext) (length int, res []byte) {
+func (fill *IOSubModuleFill) fill(ctx *ActionContext) (length int, res []byte, err error) {
 	return
 }
 
-func (calc *IOSubModuleCalc) calc(ctx *IOSubModuleCtx) (length int, res []byte) {
+func (calc *IOSubModuleCalc) check(ctx *IOSubModuleCtx, b []byte) (equal bool, err error) {
+	return
+}
+
+func (calc *IOSubModuleCalc) calc(ctx *IOSubModuleCtx) (length int, res []byte, err error) {
+
+	// 先拿到计算范围内的数据
+	subBytes := make([][]byte, len(calc.CalcInputModulesUID))
+
+	for i, uid := range calc.CalcInputModulesUID {
+		sm, has := ctx.subUIDMap[ModuleUID(uid)]
+		if !has {
+			err = fmt.Errorf("cannot find module uid %d", uid)
+			return
+		}
+		subBytes[i] = ctx.subBytes[sm.GetIndex()]
+	}
+
+	fullBytes := bytes.Join(subBytes, nil)
+
+	// fmt.Printf("calc %s, fullbytes %v\n", calc.CalcFunc, fullBytes)
+
+	// 丢进计算函数里
+	calcFn := GetCalcFn(calc.CalcFunc)
+	if calcFn == nil {
+		return 0, nil, fmt.Errorf("no [%s] calc function", calc.CalcFunc)
+	}
+
+	res = calcFn(fullBytes)
+	length = len(res)
+	err = nil
+
 	return
 }
