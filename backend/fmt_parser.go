@@ -56,8 +56,6 @@ func FmtEvalCondition(format string, ctx *ActionContext) (bool, error) {
 	return true, nil
 }
 
-type tokenType int
-
 var ErrVarNotClosed error = errors.New("var not closed")
 var ErrInvalidBinaryOp error = errors.New("invalid binary operator")
 var ErrInvalidToken error = errors.New("invalid token")
@@ -147,6 +145,61 @@ func tokenize(input string) ([]string, error) {
 	}
 
 	return tokens, nil
+}
+
+type nodeType int
+
+const (
+	NodeOp nodeType = iota
+	NodeVar
+	NodeConst
+)
+
+type astNode struct {
+	Type  nodeType
+	Value string
+	Left  *astNode
+	Right *astNode
+}
+
+/*
+优先级
+低到高
+0. ||
+1. &&
+2. ==, !=, >, <, >=, <=
+3. +, -, *, / <-先不实现这一优先级
+4. 括号
+*/
+func parseExpression() *astNode {
+
+}
+
+func parseOr() *astNode {
+
+}
+
+func parseAnd() *astNode {
+
+}
+
+func parseCompare() *astNode {
+
+}
+
+func parsePrimary() *astNode {
+
+}
+
+func getFirstMatchTokenIndex(tokens []string, matches []string) int {
+	for i, token := range tokens {
+		for _, match := range matches {
+			if match == token {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 func isHexDigit(ch byte) bool {
