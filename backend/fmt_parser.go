@@ -76,6 +76,12 @@ func tokenize(input string) ([]string, error) {
 			continue
 		}
 
+		if ch == '(' || ch == ')' {
+			tokens = append(tokens, string(ch))
+			i++
+			continue
+		}
+
 		// 变量
 		// {0} 上下文里的 LastModuleName
 		// {1} 上下文里的 LastSerialBuffer
@@ -162,33 +168,74 @@ type astNode struct {
 	Right *astNode
 }
 
+type tokens struct {
+	t   []string
+	idx int
+}
+
 /*
 优先级
 低到高
 0. ||
 1. &&
 2. ==, !=, >, <, >=, <=
-3. +, -, *, / <-先不实现这一优先级
-4. 括号
+3. 括号
+
+{test} > 0x10 || {1:5} == 0x00
 */
-func parseExpression() *astNode {
+func parseExpression(t *tokens) *astNode {
+	return t.parseOr()
+}
+
+func (t *tokens) parseOr() *astNode {
 
 }
 
-func parseOr() *astNode {
+func (t *tokens) parseAnd() *astNode {
 
 }
 
-func parseAnd() *astNode {
+func (t *tokens) parseCompare() *astNode {
 
 }
 
-func parseCompare() *astNode {
+func (t *tokens) parsePrimary() *astNode {
+	// 匹配括号
+
+	// 基本元素
 
 }
 
-func parsePrimary() *astNode {
+func isVariable(token string) bool {
+	if token[0] != '{' {
+		return false
+	}
 
+	if token[len(token)-1] != '}' {
+		return false
+	}
+
+	return true
+}
+
+// 十进制数和十六进制数
+// 只需要判断
+func isConstant(token string) bool {
+	if _, err := strconv.ParseInt(token, 0, 64); err != nil {
+		return true
+	}
+	if _, err := strconv.ParseFloat(token, 64); err != nil {
+		return true
+	}
+	return false
+}
+
+func (t *tokens) advanceToken() error {
+	if t.idx == len(t.t)-1 {
+		return errors.New("last token")
+	}
+	t.idx++
+	return nil
 }
 
 func getFirstMatchTokenIndex(tokens []string, matches []string) int {
