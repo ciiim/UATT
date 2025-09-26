@@ -6,9 +6,12 @@ import (
 	"io"
 )
 
+var ErrInvalidModule = errors.New("invalid module")
+var ErrInvalidExpression = errors.New("invalid expression")
+
 type ControlType = ModuleTypeID
 
-type Index int
+type Index = int
 
 type variable struct {
 	varName string
@@ -39,6 +42,8 @@ const (
 
 type controlFlow struct {
 	controlType ControlType
+
+	expressionAst *AstNode
 
 	TrueIndex  Index // IF 成立执行的下一个 index
 	FalseIndex Index // IF 不成立执行的下一个 index
@@ -128,7 +133,7 @@ func (a *ActionEngine) PreCompile() error {
 		if t == DeclareMT {
 			tmp, is := a.ctx.actionModuleList[i].TypeFeatureField.(DeclareModuleFeatureField)
 			if !is {
-				return errors.New("wrong module type and type id")
+				return ErrInvalidModule
 			}
 			v := &variable{
 				varName: tmp.VarName,
@@ -149,7 +154,7 @@ func (a *ActionEngine) PreCompile() error {
 		if t == GotoLabelMT {
 			tmp, is := a.ctx.actionModuleList[i].TypeFeatureField.(LabelModuleFeatureField)
 			if !is {
-				return errors.New("wrong module type and type id")
+				return ErrInvalidModule
 			}
 			a.ctx.labelMap[tmp.LabelName] = Index(i)
 		}
@@ -158,10 +163,21 @@ func (a *ActionEngine) PreCompile() error {
 		switch t {
 		case IfMT:
 
+			ifField, has := a.ctx.actionModuleList[i].TypeFeatureField.(IfModuleFeatureField)
+			if !has {
+				return ErrInvalidModule
+			}
+
+			parser := NewParser(ifField.Condition)
+			if parser == nil {
+				return ErrInvalidExpression
+			}
+
 			// 加进map里面
 			a.ctx.controlFlowMap[Index(i)] = &controlFlow{
-				controlType: t,
-				TrueIndex:   Index(i + 1),
+				controlType:   t,
+				expressionAst: parser.GetAST(),
+				TrueIndex:     Index(i + 1),
 			}
 
 			// 压栈

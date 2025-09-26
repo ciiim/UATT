@@ -7,7 +7,8 @@ import (
 
 type ModuleFunc func(ctx *ActionContext, m *ModuleBase) error
 
-type ModuleTypeID int
+// 模块ID
+type ModuleTypeID = int
 
 type ModuleType string
 

@@ -2,8 +2,12 @@ package bsd_testtool
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math/rand/v2"
 )
+
+var ErrOutOfIndex = errors.New("out of index")
 
 type ModuleUID int
 
@@ -14,6 +18,8 @@ type App struct {
 
 	// 存放位置
 	appFileLocation string
+
+	uidRand *rand.Rand
 
 	config *AppConfig
 }
@@ -82,6 +88,55 @@ func (a *App) PrintConfig() {
 
 func (a *App) StaticCheck() []error {
 	return nil
+}
+
+func (a *App) GetModule(uid ModuleUID) *ModuleBase {
+
+}
+
+func (a *App) UpdateModule(uid ModuleUID, mod *ModuleBase) error {
+	return nil
+}
+
+func (a *App) AddModule(insertAfterUID ModuleUID, moduleType ModuleTypeID, moduleTypeStr string, moduleName string, featureField any) error {
+	modUID := a.uidRand.Int64()
+	mod := ModuleBase{
+		ModuleUID:        int(modUID),
+		ModuleType:       moduleTypeStr,
+		ModuleTypeID:     moduleType,
+		Name:             moduleName,
+		BreakPoint:       false,
+		TypeFeatureField: featureField,
+	}
+
+	return nil
+}
+
+func (a *App) RemoveModule(uid ModuleUID) error {
+	return nil
+}
+
+func (a *App) SwapModule(aUID ModuleUID, bUID ModuleUID) error {
+}
+
+func (a *App) FlushActions() error {
+
+}
+
+func (a *App) SetBreakPoint(idx Index, enable bool) error {
+
+}
+
+func (a *App) Start() error {
+
+}
+
+func (a *App) Pause() error {
+
+}
+
+func (a *App) Stop() error {
+
 }
 
 func ParseAppConfig(b []byte) (*AppConfig, error) {

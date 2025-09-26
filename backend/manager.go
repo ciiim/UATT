@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -123,6 +125,8 @@ func (m *Manager) LoadApp(appName string) error {
 	}
 
 	m.nowApp.config = appConfig
+
+	m.nowApp.uidRand = rand.New(rand.NewPCG(uint64(time.Now().Second()), uint64(time.Now().Nanosecond())))
 
 	return nil
 }
