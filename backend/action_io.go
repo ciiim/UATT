@@ -19,6 +19,7 @@ type SendAction struct {
 
 type ReceiveAction struct {
 	IOAction
+	ReceiveLengthUID types.ModuleUID `json:"ReceiveLengthUID"`
 }
 
 type IOFillModule struct {
@@ -201,17 +202,17 @@ func (calc *IOCalcModule) calc(ctx *IOModuleCtx) (length int, res []byte, err er
 
 func (s *SendAction) doAction(ctx *ActionContext) error {
 
-	b, err := BuildSendBytesArray(s, ctx)
+	_, err := BuildSendBytesArray(s, ctx)
 	if err != nil {
 		ctx.SetController(&EnginControllor{nextUID: StopUID})
 		return err
 	}
 
-	_, err = ctx.serial.Write(b)
-	if err != nil {
-		ctx.SetController(&EnginControllor{nextUID: StopUID})
-		return err
-	}
+	// _, err = ctx.serial.Write(b)
+	// if err != nil {
+	// 	ctx.SetController(&EnginControllor{nextUID: StopUID})
+	// 	return err
+	// }
 
 	ctx.SetController(&defaultNextControl)
 
@@ -219,6 +220,8 @@ func (s *SendAction) doAction(ctx *ActionContext) error {
 }
 
 func (r *ReceiveAction) doAction(ctx *ActionContext) error {
+
+	fmt.Printf("r.ReceiveLengthUID: %v\n", r.ReceiveLengthUID)
 
 	ctx.SetController(&defaultNextControl)
 

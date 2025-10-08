@@ -26,6 +26,7 @@
         {"ModuleUID": 1100, "ModuleTypeID": 2, "Name": "接收Reset指令回复", "BreakPoint": false,
             "TypeFeatureField": {
                 "TimeoutMs": 1000,
+                "ReceiveLengthUID" : 1111,
                 "SubModules": [
                     {"ModuleTypeID": 11,"ModuleUID": 1110,"FixedContent": [170, 85]},
                     {"ModuleTypeID": 12, "ModuleUID": 1111, "Mode":"Check", "CalcFunc": "Length2BytesLE", "CalcTiming": "Post","PlaceholderBytes":[0,0] , "CalcInputModulesUID": [1112]},

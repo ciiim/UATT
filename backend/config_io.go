@@ -81,6 +81,7 @@ func (s *IOSendActionFeatureField) ToAction() IAction {
 
 type IOReceiveActionFeatureField struct {
 	IOActionFeatureField
+	ReceiveLengthUID types.ModuleUID `json:"ReceiveLengthUID"`
 }
 
 func (r *IOReceiveActionFeatureField) ToAction() IAction {
@@ -93,6 +94,7 @@ func (r *IOReceiveActionFeatureField) ToAction() IAction {
 			TimeoutMs: r.TimeoutMs,
 			Modules:   modules,
 		},
+		ReceiveLengthUID: r.ReceiveLengthUID,
 	}
 }
 
@@ -113,6 +115,29 @@ func unmarshalIOAction(actionTypeID types.ActionTypeID, b []byte) (any, error) {
 	default:
 		return nil, errors.New("unsupport action")
 	}
+}
+
+func (r *IOReceiveActionFeatureField) UnmarshalJSON(b []byte) error {
+	type Temp struct {
+		ReceiveLengthUID types.ModuleUID `json:"ReceiveLengthUID"`
+	}
+
+	var t Temp
+
+	if err := json.Unmarshal(b, &t); err != nil {
+		return err
+	}
+
+	r.ReceiveLengthUID = t.ReceiveLengthUID
+
+	var t1 IOActionFeatureField
+
+	if err := json.Unmarshal(b, &t1); err != nil {
+		return err
+	}
+
+	r.IOActionFeatureField = t1
+	return nil
 }
 
 func (i *IOActionFeatureField) UnmarshalJSON(b []byte) error {

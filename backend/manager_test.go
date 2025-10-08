@@ -8,6 +8,9 @@ import (
 
 func TestManagerInit(t *testing.T) {
 	bsd_testtool.GlobalManager.Init("./Apps")
+	if err := bsd_testtool.GlobalManager.LoadApp("app-111.json"); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestSaveApp(t *testing.T) {
