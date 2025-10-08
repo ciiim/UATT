@@ -1,7 +1,7 @@
 <template>
   <a-card title="组件" :style="{overflow: 'auto', borderRadius: '0'}">
   <draggable
-    :list="moduleLibrary"
+    :list="actionLibrary"
     :group="{name:'mods', pull: 'clone', put: false}"
     :sort="false"
     :clone="onClone"
@@ -16,21 +16,23 @@
 
 <script setup lang="ts">
 import { ref, defineProps } from 'vue';
+import type { ConfigActionBase } from '../../types/Action';
 import draggable from 'vuedraggable';
 
-defineProps<{ moduleLibrary: any[] }>();
+defineProps<{ actionLibrary: any[] }>();
 
 const onClone = (evt: any) => {
-  console.log('modUID' + evt.modUid);
+
+  let newAction : ConfigActionBase = {
+    ActionUID: Date.now(),
+    ActionType: evt.actionType,
+    ActionTypeID: evt.actionID,
+    Name: evt.name,
+    TypeFeatureField: evt.feat,
+    BreakPoint: false,
+  } 
   
-  return {
-    name: evt.name,
-    modUid: evt.modUid,
-    tags: [],
-    timeout: 200,
-    status: '无',
-    id: Date.now()
-  }
+  return newAction
 }
 
 </script>

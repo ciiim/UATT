@@ -1,33 +1,33 @@
 ---
 IO 类模块
         不用填写字节数，用子模块填充起所有要发送的字节
-    1. Send模块 [TypeID 1]
+    1. Send模块 [ActionTypeID 1]
 
 
-    2. Receive模块 [TypeID 2]
+    2. Receive模块 [ActionTypeID 2]
 
     子模块
-        1. Fill子模块 -- 填充, 使用声明的变量填充字节位 [TypeID 10]
-        2. Fixed子模块 -- 固定，填写固定的字节位 [TypeID 11]
-        3. Calc子模块 -- 计算，使用自定义函数填写字节位 [TypeID 12]
-        4. Custom子模块 -- 填写指定长度的自定义字节 [TypeID 13]
+        1. Fill子模块 -- 填充, 使用声明的变量填充字节位 [ModuleTypeID 10]
+        2. Fixed子模块 -- 固定，填写固定的字节位 [ModuleTypeID 11]
+        3. Calc子模块 -- 计算，使用自定义函数填写字节位 [ModuleTypeID 12]
+        4. Custom子模块 -- 填写指定长度的自定义字节 [ModuleTypeID 13]
 
 ---
 Control 类模块
-    1. Declare模块 -- 声明变量{number, string, file} [TypeID 23]
-    2. IF模块 [TypeID 24]
-    3. ELSE模块 [TypeID 25]
-    4. FOR模块 [TypeID 26]
-    5. BLOCKEND模块 [TypeID 27]
-    6. LABEL模块 [TypeID 28]
-    7. GOTO模块 [TypeID 29]
-    8. ChangeBaudrate模块 [TypeID 30]
-    9. Stop模块 [TypeID 31]
+    1. Declare模块 -- 声明变量{number, string, file} [ActionTypeID 23]
+    2. IF模块 [ActionTypeID 24]
+    3. ELSE模块 [ActionTypeID 25]
+    4. FOR模块 [ActionTypeID 26]
+    5. BLOCKEND模块 [ActionTypeID 27]
+    6. LABEL模块 [ActionTypeID 28]
+    7. GOTO模块 [ActionTypeID 29]
+    8. ChangeBaudrate模块 [ActionTypeID 30]
+    9. Stop模块 [ActionTypeID 31]
 
 ---
 Debug 类模块
-    1. Print模块 [TypeID 90]
-    1. Delay模块 [TypeID 91]
+    1. Print模块 [ActionTypeID 90]
+    1. Delay模块 [ActionTypeID 91]
 
 
 format定义

@@ -1,17 +1,31 @@
 package bsd_testtool
 
 import (
+	"bsd_testtool/backend/types"
 	"errors"
 	"fmt"
 	"io"
+	"time"
 )
 
-var ErrInvalidModule = errors.New("invalid module")
+const (
+	StopUID  types.ActionUID = -100
+	DummyUID types.ActionUID = -1
+)
+
+var ErrInvalidAction = errors.New("invalid action")
+var ErrInvalidLabel = errors.New("invalid label")
 var ErrInvalidExpression = errors.New("invalid expression")
+var ErrNoController = errors.New("no controller")
 
-type ControlType = ModuleTypeID
+type ControlType = types.ActionTypeID
 
-type Index = int
+type VarType = string
+
+const (
+	VarNumber      VarType = "number"
+	VarNumberArray VarType = "array"
+)
 
 type variable struct {
 	varName string
@@ -45,28 +59,34 @@ type controlFlow struct {
 
 	expressionAst *AstNode
 
-	TrueIndex  Index // IF 成立执行的下一个 index
-	FalseIndex Index // IF 不成立执行的下一个 index
-	EndIndex   Index // FOR/IF 最终要跳到的 BLOCKEND
-	LoopStart  Index // FOR 循环开始的 index
+	TrueUID      types.ActionUID // IF 成立执行的下一个 UID
+	FalseUID     types.ActionUID // IF 不成立执行的下一个 UID
+	EndUID       types.ActionUID // FOR/IF 最终要跳到的 BLOCKEND
+	LoopStartUID types.ActionUID // FOR 循环开始的 UID
 }
 
+type EnginControllor struct {
+	nextUID types.ActionUID
+}
+
+var defaultNextControl = EnginControllor{nextUID: -1}
+
 type ActionContext struct {
-	actionModuleList []ModuleBase
+	actionFirst *Action
 
 	// 变量表
 	variableMap map[string]*variable
 
 	// UID表，用于引用的快速获取
-	moduleUIDMap map[ModuleUID]*ModuleBase
+	actionUIDMap map[types.ActionUID]*Action
 
-	// 控制流表，key为oneIndex，用于if else for的流程跳转
-	controlFlowMap map[Index]*controlFlow
+	// 控制流表，key为{if, for}action的UID，用于if else for的流程跳转
+	controlFlowMap map[types.ActionUID]*controlFlow
 
 	// 标签表，用于goto跳转
-	labelMap map[string]Index
+	labelMap map[string]types.ActionUID
 
-	nowIndex Index // 等价于PC指针
+	nowAction *Action
 
 	nowActionStatus ActionStatus
 
@@ -74,9 +94,21 @@ type ActionContext struct {
 
 	stepCh chan int
 
-	LastModuleName   string
+	controller *EnginControllor
+
+	serial *Serial
+
+	LastActionName   string
 	LastSerialBuffer []byte
 	LastExecResult   error
+}
+
+func (ctx *ActionContext) DefaultNextAction() {
+	ctx.controller = &defaultNextControl
+}
+
+func (ctx *ActionContext) SetController(con *EnginControllor) {
+	ctx.controller = con
 }
 
 type ActionEngine struct {
@@ -97,43 +129,38 @@ func (a *ActionEngine) PreCompile() error {
 	}
 
 	a.ctx = &ActionContext{
-		actionModuleList: make([]ModuleBase, 0),
+		log:              a.app.log,
+		actionFirst:      a.app.firstAction,
+		actionUIDMap:     a.app.actionMap,
 		variableMap:      make(map[string]*variable),
-		moduleUIDMap:     make(map[ModuleUID]*ModuleBase),
-		controlFlowMap:   make(map[Index]*controlFlow),
-		labelMap:         make(map[string]Index),
+		controlFlowMap:   make(map[types.ActionUID]*controlFlow),
+		labelMap:         make(map[string]types.ActionUID),
 		stepCh:           make(chan int, 2),
-		nowIndex:         -1,
-		LastModuleName:   "NIL",
+		nowAction:        nil,
+		LastActionName:   "NIL",
 		LastSerialBuffer: nil,
 		LastExecResult:   nil,
 		nowActionStatus:  Idle,
+		serial:           &GlobalSerial,
 	}
 
-	// 拷贝执行代码副本
-	a.ctx.actionModuleList = a.app.config.Actions
-
 	type tempControlInfo struct {
-		ct ModuleTypeID
-		i  Index
+		ct types.ActionTypeID
+		i  types.ActionUID
 	}
 	controlFlowStack := make([]tempControlInfo, 0)
 
+	nowAction := a.ctx.actionFirst.next
 	// 遍历代码
-	for i := 0; i < len(a.ctx.actionModuleList); i++ {
-		// 编码Index
-		a.ctx.actionModuleList[i].Index = i
+	for nowAction != a.ctx.actionFirst {
 
-		//UID表
-		a.ctx.moduleUIDMap[ModuleUID(a.ctx.actionModuleList[i].ModuleUID)] = &a.ctx.actionModuleList[i]
-
-		t := ModuleTypeID(a.ctx.actionModuleList[i].ModuleTypeID)
+		t := types.ActionTypeID(nowAction.actionTypeID)
 
 		// 变量表
-		if t == DeclareMT {
-			tmp, is := a.ctx.actionModuleList[i].TypeFeatureField.(DeclareModuleFeatureField)
+		if t == types.DeclareAT {
+			tmp, is := nowAction.action.(*DeclareAction)
 			if !is {
-				return ErrInvalidModule
+				return ErrInvalidAction
 			}
 			v := &variable{
 				varName: tmp.VarName,
@@ -151,21 +178,21 @@ func (a *ActionEngine) PreCompile() error {
 		}
 
 		// label表
-		if t == GotoLabelMT {
-			tmp, is := a.ctx.actionModuleList[i].TypeFeatureField.(LabelModuleFeatureField)
+		if t == types.GotoLabelAT {
+			tmp, is := nowAction.action.(*LabelAction)
 			if !is {
-				return ErrInvalidModule
+				return ErrInvalidAction
 			}
-			a.ctx.labelMap[tmp.LabelName] = Index(i)
+			a.ctx.labelMap[tmp.LabelName] = nowAction.actionUID
 		}
 
 		// 控制流表
 		switch t {
-		case IfMT:
+		case types.IfAT:
 
-			ifField, has := a.ctx.actionModuleList[i].TypeFeatureField.(IfModuleFeatureField)
+			ifField, has := nowAction.action.(*IfAction)
 			if !has {
-				return ErrInvalidModule
+				return ErrInvalidAction
 			}
 
 			parser := NewParser(ifField.Condition)
@@ -174,24 +201,24 @@ func (a *ActionEngine) PreCompile() error {
 			}
 
 			// 加进map里面
-			a.ctx.controlFlowMap[Index(i)] = &controlFlow{
+			a.ctx.controlFlowMap[nowAction.actionUID] = &controlFlow{
 				controlType:   t,
 				expressionAst: parser.GetAST(),
-				TrueIndex:     Index(i + 1),
+				TrueUID:       nowAction.actionUID + 1,
 			}
 
 			// 压栈
 			controlFlowStack = append(controlFlowStack, tempControlInfo{
 				ct: t,
-				i:  Index(i),
+				i:  nowAction.actionUID,
 			})
 
-		case ElseMT:
+		case types.ElseAT:
 			cf, has := a.ctx.controlFlowMap[controlFlowStack[len(controlFlowStack)-1].i]
 			if !has {
 				return errors.New("else without matching if")
 			}
-			cf.FalseIndex = Index(i + 1)
+			cf.FalseUID = nowAction.actionUID + 1
 
 			// 临时存IF
 			ifcf := controlFlowStack[len(controlFlowStack)-1]
@@ -204,39 +231,41 @@ func (a *ActionEngine) PreCompile() error {
 				ct: t,
 				i:  ifcf.i,
 			})
-		case ForLabelMT:
+		case types.ForLabelAT:
 			// 压栈
 			controlFlowStack = append(controlFlowStack, tempControlInfo{
 				ct: t,
-				i:  Index(i),
+				i:  nowAction.actionUID,
 			})
-		case EndBlockMT:
+		case types.EndBlockAT:
 
 			top := controlFlowStack[len(controlFlowStack)-1]
 
-			if top.ct == IfMT || top.ct == ElseMT {
+			if top.ct == types.IfAT || top.ct == types.ElseAT {
 				cf, has := a.ctx.controlFlowMap[controlFlowStack[len(controlFlowStack)-1].i]
 				// 忽略多余的EndBlock，不算做错误
 				if !has {
 					continue
 				}
-				cf.EndIndex = Index(i + 1)
-			} else if top.ct == ForLabelMT {
+				cf.EndUID = nowAction.actionUID + 1
+			} else if top.ct == types.ForLabelAT {
 				// 如果是for类型，还得往map里插入一个可以通过endblock的index查找的元素
 				// 加进map里面
-				a.ctx.controlFlowMap[Index(i)] = &controlFlow{
+				a.ctx.controlFlowMap[nowAction.actionUID] = &controlFlow{
 					controlType: t,
 
 					// 这里不+1，因为要回到for上做检查
-					LoopStart: top.i,
+					LoopStartUID: top.i,
 
-					EndIndex: Index(i + 1),
+					EndUID: nowAction.actionUID + 1,
 				}
 			}
 
 			//出栈
 			controlFlowStack = controlFlowStack[:len(controlFlowStack)-1]
 		}
+
+		nowAction = nowAction.next
 	}
 
 	if len(controlFlowStack) != 0 {
@@ -246,23 +275,30 @@ func (a *ActionEngine) PreCompile() error {
 	return nil
 }
 
-func (a *ActionEngine) StartSync() {
-	a.ctx.nowIndex = 0
+func (a *ActionEngine) GetStopReason() error {
+	return a.ctx.LastExecResult
+}
+
+func (a *ActionEngine) StartSync() error {
+	a.ctx.nowAction = a.ctx.actionFirst.next
 	a.ctx.nowActionStatus = Running
-	a.innerStart()
+	return a.innerStart()
 }
 
 func (a *ActionEngine) StartAsync() {
-	a.ctx.nowIndex = 0
+	a.ctx.nowAction = a.ctx.actionFirst.next
 	a.ctx.nowActionStatus = Running
 	go a.innerStart()
 }
 
 func (a *ActionEngine) innerStart() error {
-	for a.ctx.nowIndex != Index(len(a.ctx.actionModuleList)-1) && a.ctx.nowActionStatus != WaitingStop {
-		m := a.ctx.actionModuleList[a.ctx.nowIndex]
+	for a.ctx.nowAction.actionUID != DummyUID && a.ctx.nowActionStatus != WaitingStop {
+		action := a.ctx.nowAction
 
-		if m.BreakPoint {
+		fmt.Printf("now action name %s, UID:%d\n", action.name, action.actionUID)
+		time.Sleep(time.Millisecond * 500)
+
+		if action.breakPoint {
 			a.ctx.nowActionStatus = WaitingStep
 			_, ok := <-a.ctx.stepCh
 			if !ok {
@@ -271,11 +307,14 @@ func (a *ActionEngine) innerStart() error {
 
 		}
 
-		a.ctx.LastExecResult = a.doModule(&m)
+		a.ctx.LastExecResult = a.doAction(action.action)
 
-		a.ctx.LastModuleName = m.Name
+		a.ctx.LastActionName = action.name
 
-		a.next()
+		if err := a.control(); err != nil {
+			a.ctx.nowActionStatus = ErrorStopped
+			return err
+		}
 	}
 
 	if a.ctx.LastExecResult != nil {
@@ -285,16 +324,26 @@ func (a *ActionEngine) innerStart() error {
 	return a.ctx.LastExecResult
 }
 
-func (a *ActionEngine) doModule(m *ModuleBase) error {
-	doFunc, has := ModuleFuncMap[ModuleTypeID(m.ModuleTypeID)]
-	if !has {
-		return fmt.Errorf("no found module type id %d's do function", m.ModuleTypeID)
-	}
-	return doFunc(a.ctx, m)
+func (a *ActionEngine) doAction(action IAction) error {
+	return action.doAction(a.ctx)
 }
 
-func (a *ActionEngine) next() {
-	a.ctx.nowIndex++
+func (a *ActionEngine) control() error {
+	if a.ctx.controller == nil {
+		return ErrNoController
+	}
+
+	con := a.ctx.controller
+	a.ctx.controller = nil
+
+	if con.nextUID == StopUID {
+		a.ctx.nowAction = a.ctx.actionFirst
+	} else if con.nextUID == DummyUID {
+		a.ctx.nowAction = a.ctx.nowAction.next
+	} else {
+		a.ctx.nowAction = a.ctx.actionUIDMap[con.nextUID]
+	}
+	return nil
 }
 
 func (a *ActionEngine) Step() {

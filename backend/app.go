@@ -1,148 +1,222 @@
 package bsd_testtool
 
 import (
+	"bsd_testtool/backend/types"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"math/rand/v2"
+	"os"
+	"time"
 )
 
 var ErrOutOfIndex = errors.New("out of index")
+var ErrNotFoundInsertAction = errors.New("not found insert action")
 
-type ModuleUID int
+type SerialConfig struct {
+	BaudRate int
+	DataBits int
+	Parity   string
+	StopBits int
+}
+
+type Action struct {
+	prev *Action
+	next *Action
+
+	actionUID types.ActionUID
+
+	actionTypeStr string
+
+	actionTypeID types.ActionTypeID
+
+	name string
+
+	breakPoint bool
+
+	// 执行interface
+	action IAction
+}
 
 type App struct {
+	AppName string
 
-	// 可以只解析APPName
-	AppName string `json:"AppName"`
+	log io.WriteCloser
 
-	// 存放位置
-	appFileLocation string
+	// 文件名
+	appFileName string
 
 	uidRand *rand.Rand
 
-	config *AppConfig
+	serialConfig *SerialConfig
+
+	logEnable         bool
+	logExportEnable   bool
+	logExportLoaction string
+
+	firstAction *Action
+	actionMap   map[types.ActionUID]*Action
 }
 
-type AppConfig struct {
-	AppName      string `json:"AppName"`
-	SerialConfig struct {
-		BaudRate int    `json:"BaudRate"`
-		DataBits int    `json:"DataBits"`
-		Parity   string `json:"Parity"`
-		StopBits int    `json:"StopBits"`
-	} `json:"SerialConfig"`
-	DebugEnable       bool         `json:"DebugEnable"`
-	LogEnable         bool         `json:"LogEnable"`
-	LogExportEnable   bool         `json:"LogExportEnable"`
-	LogExportLoaction string       `json:"LogExportLoaction"`
-	Actions           []ModuleBase `json:"Actions"`
-}
+func NewApp(appFileName string, config *AppConfig) *App {
+	var app App
 
-func (a *App) PrintConfig() {
-	fmt.Printf("app: %v\n", a.config)
-	for _, mod := range a.config.Actions {
-		switch m := mod.TypeFeatureField.(type) {
-		case *IOModuleFeatureField:
-			fmt.Printf("IOModuleFeatureField: %+v\n", m)
-			for _, sub := range m.SubModules {
-				switch t := sub.(type) {
-				case *IOSubModuleFill:
-					fmt.Printf("IOSubModuleFill: %+v\n", t)
-				case *IOSubModuleFixed:
-					fmt.Printf("IOSubModuleFixed: %+v\n", t)
-				case *IOSubModuleCalc:
-					fmt.Printf("IOSubModuleCalc: %+v\n", t)
-				case *IOSubModuleCustom:
-					fmt.Printf("IOSubModuleCustom: %+v\n", t)
-				}
-			}
-		case *PrintModuleFeatureField:
-			fmt.Printf("PrintModuleFeatureField: %+v\n", m)
-		case *DelayModuleFeatureField:
-			fmt.Printf("DelayModuleFeatureField: %+v\n", m)
-		case *DeclareModuleFeatureField:
-			fmt.Printf("DeclareModuleFeatureField: %+v\n", m)
-		case *IfModuleFeatureField:
-			fmt.Printf("IfModuleFeatureField: %+v\n", m)
-		case *ElseModuleFeatureField:
-			fmt.Printf("ElseModuleFeatureField: %+v\n", m)
-		case *ForModuleFeatureField:
-			fmt.Printf("ForModuleFeatureField: %+v\n", m)
-		case *BlockEndModuleFeatureField:
-			fmt.Printf("BlockEndModuleFeatureField: %+v\n", m)
-		case *LabelModuleFeatureField:
-			fmt.Printf("LabelModuleFeatureField: %+v\n", m)
-		case *GotoModuleFeatureField:
-			fmt.Printf("GotoModuleFeatureField: %+v\n", m)
-		case *ChangeBaudRateModuleFeatureField:
-			fmt.Printf("ChangeBaudRateModuleFeatureField: %+v\n", m)
-		case *StopModuleFeatureField:
-			fmt.Printf("StopModuleFeatureField: %+v\n", m)
+	app.uidRand = rand.New(rand.NewPCG(uint64(time.Now().Second()), uint64(time.Now().Nanosecond())))
 
-		default:
-			println("no this type")
+	app.AppName = config.AppName
+	app.appFileName = appFileName
+
+	app.logEnable = config.LogEnable
+	app.logExportEnable = config.LogExportEnable
+	app.logExportLoaction = config.LogExportLoaction
+
+	app.serialConfig = (*SerialConfig)(&config.SerialConfig)
+
+	if app.logEnable {
+		if app.logExportEnable {
+			// TODO: 新建日志文件
+		} else {
+			app.log = os.Stdout
 		}
 	}
+
+	app.actionMap = make(map[types.ActionUID]*Action)
+
+	// 方便遍历
+	dummy := new(Action)
+	dummy.actionUID = DummyUID
+	app.firstAction = dummy
+	dummy.prev = dummy
+	dummy.next = dummy
+
+	// 把config的actions处理成链表
+	for _, action := range config.Actions {
+		a := new(Action)
+
+		a.prev = app.firstAction.prev
+		a.next = app.firstAction
+
+		app.firstAction.prev.next = a
+		app.firstAction.prev = a
+
+		a.breakPoint = action.BreakPoint
+		a.actionUID = types.ActionUID(action.ActionUID)
+		a.actionTypeID = types.ActionTypeID(action.ActionTypeID)
+		a.actionTypeStr = action.ActionType
+		a.name = action.Name
+
+		a.action = action.TypeFeatureField.(IConfig).ToAction()
+
+		// map
+		app.actionMap[types.ActionUID(action.ActionUID)] = a
+	}
+
+	return &app
 }
 
-func (a *App) StaticCheck() []error {
-	return nil
-}
+func (a *App) FullUpdateActions(actions []ConfigActionBase) error {
+	clear(a.actionMap)
+	a.firstAction = nil
 
-func (a *App) GetModule(uid ModuleUID) *ModuleBase {
+	// 方便遍历
+	dummy := new(Action)
+	dummy.actionUID = DummyUID
+	a.firstAction = dummy
+	dummy.prev = dummy
+	dummy.next = dummy
 
-}
+	// 把config的actions处理成链表
+	for _, action := range actions {
+		na := new(Action)
 
-func (a *App) UpdateModule(uid ModuleUID, mod *ModuleBase) error {
-	return nil
-}
+		na.prev = a.firstAction.prev
+		na.next = a.firstAction
 
-func (a *App) AddModule(insertAfterUID ModuleUID, moduleType ModuleTypeID, moduleTypeStr string, moduleName string, featureField any) error {
-	modUID := a.uidRand.Int64()
-	mod := ModuleBase{
-		ModuleUID:        int(modUID),
-		ModuleType:       moduleTypeStr,
-		ModuleTypeID:     moduleType,
-		Name:             moduleName,
-		BreakPoint:       false,
-		TypeFeatureField: featureField,
+		a.firstAction.prev.next = na
+		a.firstAction.prev = na
+
+		na.breakPoint = action.BreakPoint
+		na.actionUID = types.ActionUID(action.ActionUID)
+		na.actionTypeID = types.ActionTypeID(action.ActionTypeID)
+		na.actionTypeStr = action.ActionType
+		na.name = action.Name
+
+		na.action = action.TypeFeatureField.(IConfig).ToAction()
+
+		// map
+		a.actionMap[types.ActionUID(action.ActionUID)] = na
 	}
 
 	return nil
 }
 
-func (a *App) RemoveModule(uid ModuleUID) error {
+func (a *App) GetAction(uid types.ActionUID) *Action {
+	return a.actionMap[uid]
+}
+
+func (a *App) UpdateAction(uid types.ActionUID, action *Action) error {
 	return nil
 }
 
-func (a *App) SwapModule(aUID ModuleUID, bUID ModuleUID) error {
-}
+func (a *App) AddAction(insertAfterUID types.ActionUID, actionType types.ActionTypeID, actionTypeStr string, actionName string, action IAction) error {
+	actionUID := a.uidRand.Int64()
 
-func (a *App) FlushActions() error {
-
-}
-
-func (a *App) SetBreakPoint(idx Index, enable bool) error {
-
-}
-
-func (a *App) Start() error {
-
-}
-
-func (a *App) Pause() error {
-
-}
-
-func (a *App) Stop() error {
-
-}
-
-func ParseAppConfig(b []byte) (*AppConfig, error) {
-	var appConfig AppConfig
-	if err := json.Unmarshal(b, &appConfig); err != nil {
-		return nil, err
+	insertAction, has := a.actionMap[insertAfterUID]
+	if !has {
+		return ErrInvalidAction
 	}
-	return &appConfig, nil
+
+	newAction := &Action{
+		prev:         insertAction,
+		next:         insertAction.next,
+		actionUID:    int(actionUID),
+		actionTypeID: actionType,
+		name:         actionName,
+		breakPoint:   false,
+		action:       action,
+	}
+	insertAction.next.prev = newAction
+	insertAction.next = newAction
+
+	a.actionMap[newAction.actionUID] = newAction
+
+	return nil
+}
+
+func (a *App) RemoveAction(uid types.ActionUID) error {
+	return nil
+}
+
+func (a *App) SwapAction(aUID types.ActionUID, bUID types.ActionUID) error {
+
+	return nil
+
+}
+
+func (a *App) SetBreakPoint(uid types.ActionUID, enable bool) error {
+	return nil
+}
+
+func (a *App) GetActionList() ([]ConfigActionBaseJson, error) {
+	list := make([]ConfigActionBaseJson, 0)
+
+	nowAction := a.firstAction.next
+
+	for nowAction != a.firstAction {
+		featField, err := json.Marshal(nowAction.action)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, ConfigActionBaseJson{
+			ActionUID:        nowAction.actionUID,
+			ActionType:       nowAction.actionTypeStr,
+			ActionTypeID:     nowAction.actionTypeID,
+			Name:             nowAction.name,
+			BreakPoint:       nowAction.breakPoint,
+			TypeFeatureField: featField,
+		})
+		nowAction = nowAction.next
+	}
+
+	return list, nil
 }

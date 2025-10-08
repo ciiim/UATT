@@ -1,76 +1,107 @@
 <template>
-  <div class="module-card">
-    <!-- 第一行：模块名 + 标签 -->
-    <div class="module-header">
-      <component :is="getIcon(data.modUid)" style="color: black; font-size: large;"/>
-      <span class="module-title">{{ data.name }}</span>
-      <div class="module-tags">
+  <div class="action-card" :key="data.ActionUID">
+    <!-- 第一行：图标 + 名称 + tag 列 -->
+    <div class="action-header">
+      <component :is="getIcon(data.ActionTypeID)" style="color: black; font-size: large;" />
+      <span class="action-title">{{ data.Name }}</span>
+
+      <div class="action-tags">
         <a-tag
-          v-for="(tag, index) in data.tags"
-          :key="index"
+          v-for="(tag, idx) in data.tags"
+          :key="idx"
           color="blue"
-          class="module-tag"
+          class="action-tag"
         >
-          {{ tag.label }}({{ tag.len }})
+          {{ tag.label }}<span v-if="tag.len != 0">({{ tag.len }})</span> 
         </a-tag>
       </div>
     </div>
 
     <!-- 分割线 -->
-    <div class="module-divider"></div>
+    <div class="action-divider"></div>
 
-    <!-- 第二行：展示项 + 按钮 -->
-    <div class="module-footer">
-      <span class="module-label">超时</span>
-      <span class="module-value">{{ data.timeout }}ms</span>
-      <span class="module-label">状态</span>
-      <span class="module-value">{{ data.status }}</span>
-      <div style="display: flex;margin-left: auto;">
-      <a-button type="primary" size="small" style="margin-right: 10px;"><PlayCircleOutlined /></a-button>
-      <a-button type="default" size="small"><FlagOutlined /></a-button>
+    <!-- 第二行：额外信息 + 操作按钮 -->
+    <div class="action-footer">
+      <span class="action-label">超时</span>
+      <span class="action-value">
+        {{ getTimeout(data) }}ms
+      </span>
+      <span class="action-label">状态</span>
+      <span class="action-value">{{ data.status ?? '待定' }}</span>
+
+      <div style="display: flex; margin-left: auto;">
+        <a-button type="primary" size="small" style="margin-right: 10px;" @click="">
+          <PlayCircleOutlined />
+        </a-button>
+        <a-button type="default" size="small" style="margin-right: 10px;" @click="">
+          <FlagOutlined />
+        </a-button>
+        <a-button type="primary" danger size="small" @click="doDelete">
+          <DeleteOutlined />
+        </a-button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue';
-import { PlayCircleOutlined, FlagOutlined, SendOutlined, DownloadOutlined, QuestionOutlined } from '@ant-design/icons-vue';
+import { defineProps, ref } from 'vue';
+import { DeleteOutlined, ClockCircleOutlined, StopOutlined, LineOutlined, MoreOutlined, BranchesOutlined,FontColorsOutlined, EnterOutlined, PrinterOutlined,PlayCircleOutlined, FlagOutlined, SendOutlined, DownloadOutlined, QuestionOutlined } from '@ant-design/icons-vue';
 
-interface Tag {
-  label: string;
-  len: number;
-}
-interface ModuleCardData {
-  name: string;
-  modUid: number;
-  tags: Tag[];
-  timeout: number;
-  status: string;
-}
+import type { ConfigActionBase } from "../types/Action";
+import { useActionStore } from '../stores/action_store';
 
-defineProps<{
-  data: ModuleCardData;
+const store = useActionStore();
+
+const prop = defineProps<{
+  data: any;
 }>();
 
-const getIcon = (uid : number) => {
-    let res = iconList.findIndex((e) => {return e.modUid == uid})
-    //console.log('uid' + uid + " res:" + res)
+const getIcon = (actionId : number) => {
+    let res = iconList.findIndex((e) => {return e.actionId == actionId})
     if(res != -1) {
         return iconList[res].icon;
     }
     return QuestionOutlined
-} 
+}
+
+const getTimeout = (action: ConfigActionBase) => {
+  if (action.ActionTypeID === 1 || action.ActionTypeID === 2) {
+    return action.TypeFeatureField?.TimeoutMs ?? '--'
+  }
+  return '--'
+}
+
+const doDelete = () => {
+  
+  store.actions.map((item,index) => {
+    
+    if (item.ActionUID == prop.data.ActionUID) {
+      store.actions.splice(index,1)
+    }
+  })
+}
+
 
 const iconList = [
-    {modUid: 1, icon: SendOutlined},
-    {modUid: 2, icon: DownloadOutlined}
+    {actionId: 1, icon: SendOutlined}, // send
+    {actionId: 2, icon: DownloadOutlined}, // receive
+    {actionId: 90, icon: PrinterOutlined}, // print
+    {actionId: 91, icon: ClockCircleOutlined}, // delay
+    {actionId: 20, icon: EnterOutlined}, // goto
+    {actionId: 23, icon: FontColorsOutlined}, // declare
+    {actionId: 24, icon: BranchesOutlined}, // if
+    {actionId: 25, icon: MoreOutlined}, // else
+    {actionId: 27, icon: LineOutlined}, // endblock
+    {actionId: 31, icon: StopOutlined}, // stop
+
+
 ];
 
 </script>
 
 <style scoped>
-.module-card {
+.action-card {
   border: 1px solid #d9d9d9;
   border-radius: 8px;
   padding: 8px;
@@ -78,49 +109,49 @@ const iconList = [
   min-width: 300px;
 }
 
-.module-header {
+.action-header {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.module-title {
+.action-title {
   font-weight: bold;
   font-size: medium;
   color: black;
 }
 
-.module-tags {
+.action-tags {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
 }
 
-.module-tag {
+.action-tag {
   padding: 0 6px;
   height: 20px;
   line-height: 18px;
   font-size: 12px;
 }
 
-.module-divider {
+.action-divider {
   border-top: 1px solid #f0f0f0;
   margin: 6px 0;
 }
 
-.module-footer {
+.action-footer {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.module-label {
+.action-label {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
 }
 
-.module-value {
+.action-value {
   font-size: 12px;
   color: #000;
 }

@@ -1,16 +1,17 @@
 package bsd_testtool
 
 import (
+	"bsd_testtool/backend/types"
 	"bytes"
 	"fmt"
 )
 
-func BuildSendBytesArray(f *IOModuleFeatureField, actionCtx *ActionContext) ([]byte, error) {
+func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error) {
 	totalLength := 0
 
-	ctx := f.GetContext()
+	ctx := s.GetContext()
 
-	ctx.subBytes = make([][]byte, len(f.SubModules))
+	ctx.subBytes = make([][]byte, len(s.Modules))
 
 	var fullBytes []byte
 
@@ -19,7 +20,7 @@ func BuildSendBytesArray(f *IOModuleFeatureField, actionCtx *ActionContext) ([]b
 	var err error
 
 	// 依次解析SubModule
-	for i, sm := range f.SubModules {
+	for i, sm := range s.Modules {
 		length, resBytes = sm.getBasicInfo()
 
 		totalLength += length
@@ -32,9 +33,9 @@ func BuildSendBytesArray(f *IOModuleFeatureField, actionCtx *ActionContext) ([]b
 	// 执行now的计算模块
 	for _, sm := range ctx.calcNowArr {
 		switch t := sm.(type) {
-		case *IOSubModuleFill:
+		case *IOFillModule:
 			_, resBytes, err = t.fill(actionCtx)
-		case *IOSubModuleCalc:
+		case *IOCalcModule:
 			_, resBytes, err = t.calc(ctx)
 		default:
 			return nil, fmt.Errorf("unsupport sub module type, UID: %d", sm.GetUID())
@@ -49,9 +50,9 @@ func BuildSendBytesArray(f *IOModuleFeatureField, actionCtx *ActionContext) ([]b
 	// 执行post的计算模块
 	for _, sm := range ctx.calcPostArr {
 		switch t := sm.(type) {
-		case *IOSubModuleFill:
+		case *IOFillModule:
 			_, resBytes, err = t.fill(actionCtx)
-		case *IOSubModuleCalc:
+		case *IOCalcModule:
 			_, resBytes, err = t.calc(ctx)
 		default:
 			return nil, fmt.Errorf("unsupport sub module type, UID: %d", sm.GetUID())
@@ -74,7 +75,7 @@ func BuildSendBytesArray(f *IOModuleFeatureField, actionCtx *ActionContext) ([]b
 }
 
 // 如果检查不过，返回检查不过的模块UID
-func CheckReceiveBytesArray(f *IOModuleFeatureField, actionCtx *ActionContext, checkBytes []byte) (ModuleUID, error) {
+func CheckReceiveBytesArray(r *ReceiveAction, actionCtx *ActionContext, checkBytes []byte) (types.ActionUID, error) {
 
 	// 依次检查非计算类模块同时拆分待检查的切片
 

@@ -1,69 +1,110 @@
 <template>
-  <div style="position: relative; width: 100%; height: 100%;">
-      <draggable
-        style="width: 100%; height: 100%;"
-        v-model="contentModules"
-        :group="{ name: 'mods', pull: true, put: true }"
-        :animation="200"
-        :ghostClass="'ghost'"
-        :component-data="{
-          type: 'transition-group',
-          name: !drag ? 'flip-list' : null
-        }"
-        itemKey="id"
-        @start="drag = true"
-        @end="drag = false"
-      >
-        <template #item="{ element }">
-          <div class="module-item" :class="{active: nowSelectedModule?.id === element.id}"  @click="selectModule(element)">
-          <TestModuleCard :data="element" class="module-card"/>
-          </div>
-        </template>
-      </draggable>
+  <div style="position: relative; width: 100%; height: 100%">
+    <draggable
+      style="width: 100%; height: 100%"
+      v-model="contentActions"
+      :group="{ name: 'mods', pull: true, put: true }"
+      :animation="200"
+      :ghostClass="'ghost'"
+      :component-data="{
+        type: 'transition-group',
+        name: !drag ? 'flip-list' : null,
+      }"
+      itemKey="ActionUID"
+      @start="drag = true"
+      @end="drag = false"
+      @change="onDragChange"
+      
+    >
+      <template #item="{ element }">
+        <div
+          class="action-item"
+          :class="{ active: nowSelectedAction?.ActionUID === element.ActionUID }"
+          :style="{ marginLeft: (element.indent ?? 0) * 20 + 'px' }"
+          @click="selectAction(element)"
+        >
+          <TestModuleCard :data="element" class="action-card" />
+        </div>
+      </template>
+    </draggable>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from "vue";
 
-import draggable from 'vuedraggable'
+import { GetActionList } from "../../wailsjs/go/bsd_testtool/Manager";
 
-import { defineProps } from 'vue';
+import { parseActionTags, computeIndents } from "../utils/action_utils";
 
-defineProps<{
-  moduleLibrary: any[];
+import type { ConfigActionBase } from "../types/Action";
+
+import draggable from "vuedraggable";
+
+import { defineProps } from "vue";
+import { useActionStore } from "../stores/action_store";
+
+const prop = defineProps<{
+  actionLibrary: any[];
+  needGetActionList: boolean;
 }>();
+
+const store = useActionStore()
+
+const contentActions = ref<ConfigActionBase[]>([]);
+
+const nowSelectedAction = ref<ConfigActionBase | undefined>();
+
+watch(
+  () => prop.needGetActionList,
+  () => {
+    GetActionList()
+      .then((res) => {
+        const withTags = res.map((action) => ({
+          ...action,
+          tags: parseActionTags(action), // 之前的标签解析
+        }));
+        contentActions.value = computeIndents(withTags); // 增加缩进属性
+        store.actions = contentActions.value
+      })
+      .catch((err) => {
+        console.log("错误 " + err);
+      });
+  }
+);
+
+const onDragChange = () => {
+  contentActions.value = computeIndents(contentActions.value)
+  store.actions = contentActions.value
+}
 
 const drag = ref(false);
 
-const contentModules = ref<any[]>([
-]);
 
-const nowSelectedModule = ref<any | null>(null);
 
-const selectModule = (module : any) => {
-  nowSelectedModule.value = module;
-}
-
+const selectAction = (action: any) => {
+  nowSelectedAction.value = action;
+  store.selectedAction = action;
+  
+};
 </script>
 
 <style>
-
-.module-card {
+.action-card {
   margin: 5px;
-  box-shadow: 0px 3px 5px #AAAAAA;
+  box-shadow: 0px 3px 5px #aaaaaa;
 }
 
-.module-item {
+.action-item {
   border: 2px solid transparent;
   border-radius: 4px;
   cursor: pointer;
   transition: border-color 0.2s;
 }
-.module-item.active {
+.action-item.active {
   background-color: rgba(24, 144, 255, 0.5);
 }
-.module-item:hover {
+.action-item:hover {
   transition: all 0.2s;
   background-color: rgba(57, 159, 255, 0.5); /* hover 时浅蓝色 */
 }

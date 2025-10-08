@@ -1,0 +1,1 @@
+{"AppName":"test","SerialConfig":{"BaudRate":9600,"DataBits":8,"Parity":"None","StopBits":1},"LogEnable":true,"LogExportEnable":false,"LogExportLoaction":"","Actions":[{"ActionUID":1759939276176,"ActionType":"Debug","ActionTypeID":90,"Name":"PRINT","BreakPoint":false,"TypeFeatureField":{"PrintFmt":"test"}}]}

@@ -1,15 +1,15 @@
 package bsd_testtool
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
-	"time"
 )
 
 const (
@@ -18,16 +18,22 @@ const (
 )
 
 type Manager struct {
+	ctx context.Context
 
 	// App文件存放文件夹
-	appFolder string
-	apps      []*App
-	nowApp    *App
+	appFolder    string
+	appFileNames []string
+	nowApp       *App
 }
 
 var ErrNotFoundApp error = errors.New("could not found app")
+var ErrAppExist error = errors.New("app exist")
 
 var GlobalManager Manager
+
+func (m *Manager) Startup(ctx context.Context) {
+	m.ctx = ctx
+}
 
 func (m *Manager) Init(appFolder string) error {
 	if appFolder == "" {
@@ -59,46 +65,148 @@ func (m *Manager) Init(appFolder string) error {
 		if e.IsDir() {
 			continue
 		}
-
 		if strings.Contains(e.Name(), ".json") {
-			app, err := getBasicApp(filepath.Join(appFolder, e.Name()))
-			if err != nil {
-				fmt.Printf("get app[%s] failed: %v\n", e.Name(), err)
-				continue
-			}
-			m.apps = append(m.apps, app)
+			m.appFileNames = append(m.appFileNames, e.Name())
 		}
 	}
+
+	m.appFolder = appFolder
 
 	return nil
 }
 
 func (m *Manager) GetAllAppName() []string {
-	appNames := make([]string, len(m.apps))
-	for _, app := range m.apps {
-		appNames = append(appNames, app.AppName)
-	}
-	return appNames
+	fmt.Printf("m.appFileNames: %v\n", m.appFileNames)
+	return m.appFileNames
 }
 
 func (m *Manager) GetNowApp() *App {
 	return m.nowApp
 }
 
-func (m *Manager) LoadApp(appName string) error {
-	var app *App
-	for _, a := range m.apps {
-		if a.AppName == appName {
-			app = a
-		}
-	}
-	if app == nil {
+func (m *Manager) Start() error {
+	if m.nowApp == nil {
 		return ErrNotFoundApp
 	}
 
-	m.nowApp = app
+	engine := NewActionEngine(m.nowApp)
 
-	appConfigFile, err := os.Open(m.nowApp.appFileLocation)
+	if err := engine.PreCompile(); err != nil {
+		return err
+	}
+
+	engine.StartAsync()
+
+	return nil
+}
+
+func (m *Manager) Stop() error {
+	return nil
+}
+
+func (m *Manager) GetAppSettings() (AppConfigSettings, error) {
+	if m.nowApp == nil {
+		return AppConfigSettings{}, ErrNotFoundApp
+	}
+
+	var settings AppConfigSettings
+
+	settings.AppName = m.nowApp.appFileName
+	settings.LogEnable = m.nowApp.logEnable
+	settings.LogExportEnable = m.nowApp.logExportEnable
+	settings.LogExportLoaction = m.nowApp.logExportLoaction
+	settings.SerialConfig = struct {
+		BaudRate int    "json:\"BaudRate\""
+		DataBits int    "json:\"DataBits\""
+		Parity   string "json:\"Parity\""
+		StopBits int    "json:\"StopBits\""
+	}(*m.nowApp.serialConfig)
+
+	return settings, nil
+}
+
+func (m *Manager) GetActionList() ([]ConfigActionBaseJson, error) {
+	if m.nowApp == nil {
+		return nil, ErrNotFoundApp
+	}
+
+	return m.nowApp.GetActionList()
+}
+
+func (m *Manager) CreateApp(basic AppConfigSettings) error {
+
+	appName := basic.AppName + ".json"
+
+	var loadAppName string
+	for _, a := range m.appFileNames {
+		if a == appName {
+			loadAppName = a
+			break
+		}
+	}
+	if loadAppName != "" {
+		return ErrAppExist
+	}
+
+	basicJson, err := json.Marshal(&basic)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(filepath.Join(m.appFolder, appName))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(basicJson)
+	if err != nil {
+		return err
+	}
+
+	m.appFileNames = append(m.appFileNames, appName)
+
+	return nil
+}
+
+func (m *Manager) DeleteApp(appFileName string) error {
+	var loadAppName string
+	for _, a := range m.appFileNames {
+		if a == appFileName {
+			loadAppName = a
+			break
+		}
+	}
+	if loadAppName == "" {
+		return ErrNotFoundApp
+	}
+
+	if m.nowApp != nil && m.nowApp.appFileName == appFileName {
+		m.nowApp = nil
+	}
+
+	if err := os.Remove(filepath.Join(m.appFolder, appFileName)); err != nil {
+		return err
+	}
+
+	m.appFileNames = slices.DeleteFunc(m.appFileNames, func(fileName string) bool {
+		return appFileName == fileName
+	})
+
+	return nil
+}
+
+func (m *Manager) LoadApp(appName string) error {
+	var loadAppName string
+	for _, a := range m.appFileNames {
+		if a == appName {
+			loadAppName = a
+		}
+	}
+	if loadAppName == "" {
+		return ErrNotFoundApp
+	}
+	appConfigFile, err := os.Open(filepath.Join(m.appFolder, loadAppName))
 	if err != nil {
 		return err
 	}
@@ -124,41 +232,96 @@ func (m *Manager) LoadApp(appName string) error {
 		return err
 	}
 
-	m.nowApp.config = appConfig
-
-	m.nowApp.uidRand = rand.New(rand.NewPCG(uint64(time.Now().Second()), uint64(time.Now().Nanosecond())))
+	m.nowApp = NewApp(loadAppName, appConfig)
 
 	return nil
 }
 
-func getBasicApp(appFile string) (*App, error) {
-	file, err := os.Open(appFile)
+func (m *Manager) SyncAppSettings(settings AppConfigSettings) error {
+	if m.nowApp == nil {
+		return ErrNotFoundApp
+	}
+
+	nowApp := m.nowApp
+
+	nowApp.logEnable = settings.LogEnable
+	nowApp.logExportEnable = settings.LogExportEnable
+	nowApp.logExportLoaction = settings.LogExportLoaction
+	nowApp.serialConfig = (*SerialConfig)(&settings.SerialConfig)
+
+	return nil
+}
+
+// 同步前端Actions到后端App的Action链表里
+func (m *Manager) SyncActions(actions []ConfigActionBaseJson) error {
+	if m.nowApp == nil {
+		return ErrNotFoundApp
+	}
+
+	newActions := make([]ConfigActionBase, len(actions))
+
+	for i, a := range actions {
+		newActions[i] = a.ToBase()
+	}
+
+	return m.nowApp.FullUpdateActions(newActions)
+}
+
+func (m *Manager) SaveApp() error {
+
+	if m.nowApp == nil {
+		return ErrNotFoundApp
+	}
+
+	//重新组装AppConfig
+	config := AppConfig{
+		AppName: m.nowApp.AppName,
+		SerialConfig: struct {
+			BaudRate int    "json:\"BaudRate\""
+			DataBits int    "json:\"DataBits\""
+			Parity   string "json:\"Parity\""
+			StopBits int    "json:\"StopBits\""
+		}(*m.nowApp.serialConfig),
+		LogEnable:         m.nowApp.logEnable,
+		LogExportEnable:   m.nowApp.logExportEnable,
+		LogExportLoaction: m.nowApp.logExportLoaction,
+		Actions:           make([]ConfigActionBase, 0),
+	}
+
+	// 组装Actions
+	nowAction := m.nowApp.firstAction.next
+
+	for nowAction != m.nowApp.firstAction {
+		configActionBase := ConfigActionBase{
+			ActionUID:        nowAction.actionUID,
+			ActionTypeID:     nowAction.actionTypeID,
+			ActionType:       nowAction.actionTypeStr,
+			Name:             nowAction.name,
+			TypeFeatureField: nowAction.action,
+		}
+		config.Actions = append(config.Actions, configActionBase)
+		nowAction = nowAction.next
+	}
+
+	configJson, err := json.Marshal(&config)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer file.Close()
 
-	fileStat, err := file.Stat()
+	//覆盖写入
+	configFile, err := os.Create(filepath.Join(m.appFolder, m.nowApp.appFileName))
 	if err != nil {
-		return nil, err
+		return err
+	}
+	defer configFile.Close()
+
+	if _, err = configFile.Write(configJson); err != nil {
+		return err
 	}
 
-	fileBuffer := make([]byte, fileStat.Size())
+	return nil
+}
 
-	readBytes, err := file.Read(fileBuffer)
-	if err != nil || int64(readBytes) != fileStat.Size() {
-		return nil, err
-	}
-
-	var app App
-
-	if err = json.Unmarshal(fileBuffer, &app); err != nil {
-		return nil, err
-	}
-
-	app.appFileLocation = appFile
-
-	// fmt.Printf("app.AppName: %v\n", app.AppName)
-
-	return &app, nil
+func (m *Manager) GetAllSerial() ([]string, error) {
+	return GlobalSerial.GetAllPort()
 }

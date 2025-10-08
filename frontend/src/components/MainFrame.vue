@@ -1,7 +1,11 @@
 <template>
 
 	<a-layout style="height: 100vh; overflow: hidden;">
-		<a-layout-sider :style="siderStyle" breakpoint="lg" collapsed-width="0" v-model:collapsed="leftCollapsed" :trigger="null" collapsible>Sider</a-layout-sider>
+		<a-layout-sider :style="siderStyle" breakpoint="lg" collapsed-width="0" v-model:collapsed="leftCollapsed" :trigger="null" collapsible>
+			<LeftSiderMenu
+			@app-loaded="notifyGetActionList"
+			></LeftSiderMenu>
+		</a-layout-sider>
 		<a-layout>
 			<a-layout-header :style="headerStyle">
 				<!-- 左菜单折叠按钮 -->
@@ -19,20 +23,25 @@
 
 			<a-layout-content :style="contentStyle">
 				<MainContent 
-      			:moduleLibrary="moduleLibrary"></MainContent>
+				:need-get-action-list="needGetActionList"
+      			:actionLibrary="actionLibrary"></MainContent>
 			</a-layout-content>
 		</a-layout>
 
-		<a-layout-sider :width="300" :style="siderStyle" breakpoint="lg" collapsed-width="0" :trigger="null" v-model:collapsed="rightCollapsed" collapsible
+		<a-layout-sider :width="270" :style="siderStyle" breakpoint="lg" collapsed-width="0" :trigger="null" v-model:collapsed="rightCollapsed" collapsible
 			reverseArrow>
-			<RightSider :module-library="moduleLibrary"></RightSider>
+			<RightSider 
+			:action-library="actionLibrary"
+			></RightSider>
 		</a-layout-sider>
 	</a-layout>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import type { CSSProperties } from 'vue'
+import { message } from 'ant-design-vue'
+import { SaveApp, SyncActions } from '../../wailsjs/go/bsd_testtool/Manager'
 import MainContent from './MainContent.vue';
 import {
 	MenuUnfoldOutlined,
@@ -40,15 +49,49 @@ import {
 } from '@ant-design/icons-vue';
 import HeaderToolBar from './HeaderToolBar.vue';
 import RightSider from './RightSider.vue';
+import LeftSiderMenu from './LeftSiderMenu.vue';
+import { ConfigActionBase } from '../types/Action';
+import { useActionStore } from '../stores/action_store';
 
 const leftCollapsed = ref<boolean>(false);
 const rightCollapsed = ref<boolean>(false);
+
+const store = useActionStore();
+
+
+const needGetActionList = ref<boolean>(false);
+const notifyGetActionList = () => {
+	needGetActionList.value = !needGetActionList.value
+}
 
 const siderStyle: CSSProperties = {
 	textAlign: 'center',
 	color: '#fff',
 	backgroundColor: '#3ba0e9',
 }
+
+const handleKeyDown = async (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault() // 阻止浏览器保存网页
+    try {
+      await SyncActions(store.actions)
+      await SaveApp()
+      message.success('保存成功')
+    } catch (err) {
+		if (err != 'could not found app') {
+			message.error('保存失败,' + err)
+		}
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 
 const headerStyle: CSSProperties = {
 	display: "flex",
@@ -71,14 +114,16 @@ const contentStyle: CSSProperties = {
 }
 
 
-const moduleLibrary = ref([
-  {name: '发送', modUid: 1},
-  {name: '接收', modUid: 2},
-  {name: 'PRINT', modUid: 3},
-  {name: 'IF', modUid: 4},
-  {name: 'ELSE', modUid: 5},
-  {name: 'FOR', modUid: 6},
+const actionLibrary = ref([
+  {name: '发送', actionID: 1, actionType: 'IO', feat : {TimeoutMs: 1000, Modules: []}},
+  {name: '接收', actionID: 2, actionType: 'IO', feat : {TimeoutMs: 1000, Modules: []}},
+  {name: 'PRINT', actionID: 90, actionType: 'Debug', feat : {PrintFmt: ""}},
+  {name: 'IF', actionID: 24, actionType: 'Control', feat : {Condition: ""}},
+  {name: 'ELSE', actionID: 25, actionType: 'Control', feat : {}},
+  {name: 'EndBlock', actionID: 27, actionType: 'Control', feat : {}},
 ])
+
+const nowApp = ref('')
 
 </script>
 

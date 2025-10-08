@@ -1,7 +1,9 @@
 package main
 
 import (
+	bsd_testtool "bsd_testtool/backend"
 	"embed"
+	"fmt"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -13,7 +15,11 @@ var assets embed.FS
 
 func main() {
 	// Create an instance of the app structure
-	app := NewApp()
+	manager := &bsd_testtool.GlobalManager
+
+	if err := manager.Init(""); err != nil {
+		fmt.Printf("manager init error: %s\n", err.Error())
+	}
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -24,9 +30,9 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 200, G: 200, B: 200, A: 1},
-		OnStartup:        app.startup,
+		OnStartup:        manager.Startup,
 		Bind: []any{
-			app,
+			manager,
 		},
 	})
 

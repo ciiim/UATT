@@ -16,20 +16,29 @@ func FmtSprintf(format string, ctx *ActionContext) string {
 		if ctx == nil {
 			return "[ctx nil]"
 		}
-		idx := re.FindStringSubmatch(s)[1]
+		v := re.FindStringSubmatch(s)[1]
 		arrIndexBegin, arrIndexEnd := -1, -1
-		if strings.Contains(idx, ":") {
-			arrFmtStrings := strings.Split(idx, ":")
-			idx = arrFmtStrings[0]
+
+		// 数组下标
+		if strings.Contains(v, ":") {
+			arrFmtStrings := strings.Split(v, ":")
+			v = arrFmtStrings[0]
 			arrIndexStrings := strings.Split(arrFmtStrings[1], ",")
-			if len(arrIndexStrings) == 2 {
-				arrIndexEnd, _ = strconv.Atoi(arrIndexStrings[1])
+
+			if len(arrIndexStrings) == 2 { // 范围
+				end, err := strconv.Atoi(arrIndexStrings[1])
+				if err == nil {
+					arrIndexEnd = end
+				}
 			}
-			arrIndexBegin, _ = strconv.Atoi(arrIndexStrings[0])
+			begin, err := strconv.Atoi(arrIndexStrings[0])
+			if err == nil {
+				arrIndexBegin = begin
+			}
 		}
-		switch idx {
+		switch v {
 		case "0":
-			return ctx.LastModuleName
+			return ctx.LastActionName
 		case "1":
 			if arrIndexBegin > len(ctx.LastSerialBuffer)-1 || arrIndexEnd > len(ctx.LastSerialBuffer)-1 {
 				return "[index out of range]"
@@ -42,14 +51,88 @@ func FmtSprintf(format string, ctx *ActionContext) string {
 				return hex.EncodeToString(ctx.LastSerialBuffer)
 			}
 		case "2":
-			return ctx.LastExecResult.Error()
+			return func() string {
+				if ctx.LastExecResult == nil {
+					return "nil"
+				} else {
+					return ctx.LastExecResult.Error()
+				}
+			}()
+		default: // 普通变量
+			res := FmtGetVar(v, ctx)
+			if res != nil {
+				switch v := res.(type) {
+				case int:
+					return strconv.Itoa(v)
+				case []int:
+					return func() string {
+						b := strings.Builder{}
+						for _, n := range v {
+							b.WriteByte(byte(n))
+						}
+						return b.String()
+					}()
+				}
+			}
 		}
 		return "[nil]"
 	})
 }
 
-func FmtGetVar(format string, ctx *ActionContext) (varType string, v any) {
-	return
+// 取变量值，如{test}, {res:1,5}, 输入varName字符串不带{}
+// 返回值为整数或整数数组
+func FmtGetVar(varFmt string, ctx *ActionContext) any {
+	if strings.Contains(varFmt, ":") {
+		arrFmtStrings := strings.Split(varFmt, ":")
+		arrIndexBegin, arrIndexEnd := -1, -1
+		varName := arrFmtStrings[0]
+		v, has := ctx.variableMap[varName]
+		if !has {
+			return nil
+		}
+
+		if v.varType != VarNumberArray {
+			return nil
+		}
+
+		vArr := v.v.([]int)
+
+		arrIndexStrings := strings.Split(arrFmtStrings[1], ",")
+
+		if len(arrIndexStrings) == 2 { // 范围
+			end, err := strconv.Atoi(arrIndexStrings[1])
+			if err == nil {
+				arrIndexEnd = end
+			}
+		}
+		begin, err := strconv.Atoi(arrIndexStrings[0])
+		if err == nil {
+			arrIndexBegin = begin
+		}
+
+		if arrIndexBegin == -1 {
+			return nil
+		}
+
+		if arrIndexEnd != -1 {
+			return vArr[arrIndexBegin:arrIndexEnd]
+		} else {
+			return vArr[arrIndexBegin]
+		}
+
+	} else {
+		v, has := ctx.variableMap[varFmt]
+		if !has {
+			return nil
+		}
+		switch v.varType {
+		case VarNumber:
+			return v.v.(int)
+		case VarNumberArray:
+			return v.v.([]int)
+		}
+	}
+	return nil
 }
 
 func FmtEvalCondition(format string, ctx *ActionContext) (bool, error) {
@@ -89,7 +172,7 @@ func tokenize(input string) ([]token, error) {
 		}
 
 		// 变量
-		// {0} 上下文里的 LastModuleName
+		// {0} 上下文里的 LastActionName
 		// {1} 上下文里的 LastSerialBuffer
 		// {2} 上下文里的 LastExecResult
 		// {var} 变量
@@ -204,6 +287,66 @@ type token struct {
 type parser struct {
 	t   []token
 	idx int
+}
+
+func compareEq(lv, rv int) bool {
+	return lv == rv
+}
+
+func compareNum(lv, rv int) int {
+	return lv - rv
+}
+
+func toBool(v int) bool {
+	return v > 0
+}
+func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
+	switch a.Type {
+	case NodeOp:
+		lv, err := a.Left.Eval(ctx)
+		if err != nil {
+			return false, err
+		}
+
+		rv, err := a.Right.Eval(ctx)
+		if err != nil {
+			return false, err
+		}
+
+		switch a.Value {
+		case "==":
+			return compareEq(lv.(int), rv.(int)), nil
+		case "!=":
+			return !compareEq(lv.(int), rv.(int)), nil
+		case "||":
+			return toBool(lv.(int)) || toBool(rv.(int)), nil
+		case "&&":
+			return toBool(lv.(int)) && toBool(rv.(int)), nil
+		case "<":
+			return compareNum(lv.(int), rv.(int)) < 0, nil
+		case ">":
+			return compareNum(lv.(int), rv.(int)) > 0, nil
+		case "<=":
+			return compareNum(lv.(int), rv.(int)) <= 0, nil
+		case ">=":
+			return compareNum(lv.(int), rv.(int)) >= 0, nil
+		}
+	case NodeConst:
+		n, err := strconv.ParseInt(a.Value, 0, 64)
+		if err != nil {
+			return false, err
+		}
+		return n, nil
+	case NodeVar:
+		v := FmtGetVar(a.Value[1:len(a.Value)-2], ctx)
+		switch t := v.(type) {
+		case string:
+			return false, errors.New("node var cannot be string")
+		case int:
+			return t, nil
+		}
+	}
+	return false, errors.New("empty ast")
 }
 
 /*

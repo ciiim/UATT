@@ -5,44 +5,54 @@ import (
 	"testing"
 )
 
-var test bsd_testtool.IOModuleFeatureField = bsd_testtool.IOModuleFeatureField{
-	TimeoutMs: 1000,
-	SubModules: []bsd_testtool.IOSubModule{
-		&bsd_testtool.IOSubModuleFixed{
-			IOSubModuleBase: bsd_testtool.IOSubModuleBase{
-				ModuleTypeID: 11,
-				ModuleUID:    100,
+var test bsd_testtool.SendAction = bsd_testtool.SendAction{
+	IOAction: bsd_testtool.IOAction{
+		TimeoutMs: 1000,
+		Modules: []bsd_testtool.IOModule{
+			&bsd_testtool.IOFixedModule{
+				bsd_testtool.IOModuleConfigFixed{
+					IOModuleConfigBase: bsd_testtool.IOModuleConfigBase{
+						ModuleTypeID: 11,
+						ModuleUID:    100,
+					},
+					FixedContent: []int{0xAA, 0x55},
+				},
 			},
-			FixedContent: []int{0xAA, 0x55},
-		},
-		&bsd_testtool.IOSubModuleCalc{
-			IOSubModuleBase: bsd_testtool.IOSubModuleBase{
-				ModuleTypeID: 12,
-				ModuleUID:    101,
+			&bsd_testtool.IOCalcModule{
+				bsd_testtool.IOModuleConfigCalc{
+					IOModuleConfigBase: bsd_testtool.IOModuleConfigBase{
+						ModuleTypeID: 12,
+						ModuleUID:    101,
+					},
+					Mode:                "Calc",
+					PlaceholderBytes:    []int{0x00, 0x00},
+					CalcTiming:          "Now",
+					CalcFunc:            "Length2BytesLE",
+					CalcInputModulesUID: []int{102},
+				},
 			},
-			Mode:                "Calc",
-			PlaceholderBytes:    []int{0x00, 0x00},
-			CalcTiming:          "Now",
-			CalcFunc:            "Length2BytesLE",
-			CalcInputModulesUID: []int{102},
-		},
-		&bsd_testtool.IOSubModuleCustom{
-			IOSubModuleBase: bsd_testtool.IOSubModuleBase{
-				ModuleTypeID: 11,
-				ModuleUID:    102,
+			&bsd_testtool.IOCustomModule{
+				bsd_testtool.IOModuleConfigCustom{
+					IOModuleConfigBase: bsd_testtool.IOModuleConfigBase{
+						ModuleTypeID: 11,
+						ModuleUID:    102,
+					},
+					CustomContent: []int{0x00, 0x01, 0x05, 0x11, 0x23},
+				},
 			},
-			CustomContent: []int{0x00, 0x01, 0x05, 0x11, 0x23},
-		},
-		&bsd_testtool.IOSubModuleCalc{
-			IOSubModuleBase: bsd_testtool.IOSubModuleBase{
-				ModuleTypeID: 12,
-				ModuleUID:    103,
+			&bsd_testtool.IOCalcModule{
+				bsd_testtool.IOModuleConfigCalc{
+					IOModuleConfigBase: bsd_testtool.IOModuleConfigBase{
+						ModuleTypeID: 12,
+						ModuleUID:    103,
+					},
+					Mode:                "Calc",
+					PlaceholderBytes:    []int{0x00},
+					CalcTiming:          "Post",
+					CalcFunc:            "Xor1Bytes",
+					CalcInputModulesUID: []int{101, 102},
+				},
 			},
-			Mode:                "Calc",
-			PlaceholderBytes:    []int{0x00},
-			CalcTiming:          "Post",
-			CalcFunc:            "Xor1Bytes",
-			CalcInputModulesUID: []int{101, 102},
 		},
 	},
 }

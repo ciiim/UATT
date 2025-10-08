@@ -6,15 +6,14 @@
         "Parity": "None",
         "StopBits": 1
     },
-    "DebugEnable": false,
-    "LogEnable": false,
+    "LogEnable": true,
     "LogExportEnable": false,
     "LogExportLoaction": "",
     "Actions": [
-        {"ModuleUID": 1000, "ModuleType": "IO", "ModuleTypeID": 1, "Name": "发送Reset指令", "BreakPoint": false,
+        {"ActionUID": 1000, "ActionType": "IO", "ActionTypeID": 1, "Name": "发送Reset指令", "BreakPoint": false,
             "TypeFeatureField": {
                 "TimeoutMs": 1000,
-                "SubModules": [
+                "Modules": [
                     {"ModuleTypeID": 11,"ModuleUID": 1010,"FixedContent": [170, 85]},
                     {"ModuleTypeID": 12, "ModuleUID": 1011,"Mode":"Fill", "CalcFunc": "Length2BytesLE", "CalcOrder": 0, "CalcTiming": "Now","PlaceholderBytes":[0,0] , "CalcInputModulesUID": [1012]},
                     {"ModuleTypeID": 13, "ModuleUID": 1012, "CustomLength": 5, "CustomContent": [0, 0, 5, 0, 1]},
@@ -23,10 +22,10 @@
                 ]
             }
         },
-        {"ModuleUID": 1100, "ModuleType": "IO", "ModuleTypeID": 2, "Name": "接收Reset指令回复", "BreakPoint": false,
+        {"ActionUID": 1100, "ActionType": "IO", "ActionTypeID": 2, "Name": "接收Reset指令回复", "BreakPoint": false,
             "TypeFeatureField": {
                 "TimeoutMs": 1000,
-                "SubModules": [
+                "Modules": [
                     {"ModuleTypeID": 11,"ModuleUID": 1110,"FixedContent": [170, 85]},
                     {"ModuleTypeID": 12, "ModuleUID": 1111, "Mode":"Check", "CalcFunc": "Length2BytesLE", "CalcOrder": 0, "CalcTiming": "Post","PlaceholderBytes":[0,0] , "CalcInputModulesUID": [1112]},
                     {"ModuleTypeID": 13, "ModuleUID": 1112, "CustomLength": 3, "CustomContent": [0,0,1]},
@@ -35,41 +34,41 @@
             }
         },
         {
-            "ModuleUID": 1200, "ModuleType": "Debug", "ModuleTypeID": 90, "Name": "打印回复", "BreakPoint": false,
+            "ActionUID": 1200, "ActionType": "Debug", "ActionTypeID": 90, "Name": "打印回复", "BreakPoint": false,
             "TypeFeatureField": {
                 "PrintFmt": "action_name {0}, recv {1}, res {2}"
             }
         },
         {
-            "ModuleUID": 1201, "ModuleType": "Debug", "ModuleTypeID": 91, "Name": "delay 500ms", "BreakPoint": false,
+            "ActionUID": 1201, "ActionType": "Debug", "ActionTypeID": 91, "Name": "delay 500ms", "BreakPoint": false,
             "TypeFeatureField": {
                 "DelayMs": 500
             }
         },
         {
-            "ModuleUID": 1300, "ModuleType": "Control", "ModuleTypeID": 24, "Name": "如果失败", "BreakPoint": false,
+            "ActionUID": 1300, "ActionType": "Control", "ActionTypeID": 24, "Name": "如果失败", "BreakPoint": false,
             "TypeFeatureField": {
                 "Condition": "{1:6} == 1"
             }
         },
         {
-            "ModuleUID": 1400, "ModuleType": "Control", "ModuleTypeID": 31, "Name": "退出", "BreakPoint": false,
+            "ActionUID": 1400, "ActionType": "Control", "ActionTypeID": 31, "Name": "退出", "BreakPoint": false,
             "TypeFeatureField": {
                 "StopCode": -100
             }
         },
         {
-            "ModuleUID": 1500, "ModuleType": "Control", "ModuleTypeID": 25, "Name": "else", "BreakPoint": false,
+            "ActionUID": 1500, "ActionType": "Control", "ActionTypeID": 25, "Name": "else", "BreakPoint": false,
             "TypeFeatureField": {}
         },
         {
-            "ModuleUID": 1600, "ModuleType": "Debug", "ModuleTypeID": 90, "Name": "print success", "BreakPoint": false,
+            "ActionUID": 1600, "ActionType": "Debug", "ActionTypeID": 90, "Name": "print success", "BreakPoint": false,
             "TypeFeatureField": {
                 "PrintFmt": "recv success"
             }
         },
         {
-            "ModuleUID": 1700, "ModuleType": "Control", "ModuleTypeID": 27, "Name": "ENDBLOCK", "BreakPoint": false,
+            "ActionUID": 1700, "ActionType": "Control", "ActionTypeID": 27, "Name": "ENDBLOCK", "BreakPoint": false,
             "TypeFeatureField": {}
         }
     ]

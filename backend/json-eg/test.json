@@ -11,7 +11,7 @@
     "LogExportEnable": false,
     "LogExportLoaction": "",
     "Actions": [
-        {"ModuleUID": 1000, "ModuleType": "IO", "ModuleTypeID": 1, "Name": "发送Reset指令", "BreakPoint": false,
+        {"ModuleUID": 1000, "ModuleTypeID": 1, "Name": "发送Reset指令", "BreakPoint": false,
             "TypeFeatureField": {
                 "TimeoutMs": 1000,
                 "SubModules": [
@@ -23,7 +23,7 @@
                 ]
             }
         },
-        {"ModuleUID": 1100, "ModuleType": "IO", "ModuleTypeID": 2, "Name": "接收Reset指令回复", "BreakPoint": false,
+        {"ModuleUID": 1100, "ModuleTypeID": 2, "Name": "接收Reset指令回复", "BreakPoint": false,
             "TypeFeatureField": {
                 "TimeoutMs": 1000,
                 "SubModules": [
@@ -35,35 +35,35 @@
             }
         },
         {
-            "ModuleUID": 1200, "ModuleType": "Debug", "ModuleTypeID": 90, "Name": "打印回复", "BreakPoint": false,
+            "ModuleUID": 1200, "ModuleTypeID": 90, "Name": "打印回复", "BreakPoint": false,
             "TypeFeatureField": {
                 "PrintFmt": "action_name {0}, recv {1}, res {2}"
             }
         },
         {
-            "ModuleUID": 1300, "ModuleType": "Control", "ModuleTypeID": 24, "Name": "如果失败", "BreakPoint": false,
+            "ModuleUID": 1300, "ModuleTypeID": 24, "Name": "如果失败", "BreakPoint": false,
             "TypeFeatureField": {
                 "Condition": "{1:6} == 1"
             }
         },
         {
-            "ModuleUID": 1400, "ModuleType": "Control", "ModuleTypeID": 31, "Name": "退出", "BreakPoint": false,
+            "ModuleUID": 1400, "ModuleTypeID": 31, "Name": "退出", "BreakPoint": false,
             "TypeFeatureField": {
                 "StopCode": -100
             }
         },
         {
-            "ModuleUID": 1500, "ModuleType": "Control", "ModuleTypeID": 25, "Name": "else", "BreakPoint": false,
+            "ModuleUID": 1500, "ModuleTypeID": 25, "Name": "else", "BreakPoint": false,
             "TypeFeatureField": {}
         },
         {
-            "ModuleUID": 1600, "ModuleType": "Debug", "ModuleTypeID": 90, "Name": "print success", "BreakPoint": false,
+            "ModuleUID": 1600, "ModuleTypeID": 90, "Name": "print success", "BreakPoint": false,
             "TypeFeatureField": {
                 "PrintFmt": "recv success"
             }
         },
         {
-            "ModuleUID": 1700, "ModuleType": "Control", "ModuleTypeID": 27, "Name": "ENDBLOCK", "BreakPoint": false,
+            "ModuleUID": 1700, "ModuleTypeID": 27, "Name": "ENDBLOCK", "BreakPoint": false,
             "TypeFeatureField": {}
         }
     ]
