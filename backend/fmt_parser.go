@@ -1,7 +1,6 @@
 package bsd_testtool
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
@@ -10,93 +9,51 @@ import (
 	"unicode"
 )
 
+var testVar variable = variable{
+	varName: "test",
+	varType: VarNumberArray,
+	v:       []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+}
+
+var TestActionContext ActionContext = ActionContext{
+	LastActionName:   "Send 11",
+	LastSerialBuffer: []byte{0xAA, 0xFF, 0x01, 0x05, 0x55, 0x55, 0x55},
+	LastExecResult:   errors.New("test error"),
+	variableMap: map[string]*variable{
+		"test": &testVar,
+	},
+}
+
 func FmtSprintf(format string, ctx *ActionContext) string {
-	re := regexp.MustCompile(`\{(\d+|\d:\S+)\}`)
+	re := regexp.MustCompile(`\{(\S+)\}`)
 	return re.ReplaceAllStringFunc(format, func(s string) string {
 		if ctx == nil {
 			return "[ctx nil]"
 		}
+
 		v := re.FindStringSubmatch(s)[1]
-		arrIndexBegin, arrIndexEnd := -1, -1
 
-		// 数组下标
-		if strings.Contains(v, ":") {
-			arrFmtStrings := strings.Split(v, ":")
-			v = arrFmtStrings[0]
-			arrIndexStrings := strings.Split(arrFmtStrings[1], ",")
-
-			if len(arrIndexStrings) == 2 { // 范围
-				end, err := strconv.Atoi(arrIndexStrings[1])
-				if err == nil {
-					arrIndexEnd = end
-				}
-			}
-			begin, err := strconv.Atoi(arrIndexStrings[0])
-			if err == nil {
-				arrIndexBegin = begin
-			}
+		res := FmtGetVar(v, ctx)
+		if res == nil {
+			return "[nil]"
 		}
-		switch v {
-		case "0":
-			return ctx.LastActionName
-		case "1":
-			if arrIndexBegin > len(ctx.LastSerialBuffer)-1 || arrIndexEnd > len(ctx.LastSerialBuffer)-1 {
-				return "[index out of range]"
-			}
-			if arrIndexBegin != -1 && arrIndexEnd == -1 {
-				return hex.EncodeToString(ctx.LastSerialBuffer[arrIndexBegin : arrIndexBegin+1])
-			} else if arrIndexBegin != -1 {
-				return hex.EncodeToString(ctx.LastSerialBuffer[arrIndexBegin:arrIndexEnd])
-			} else {
-				return hex.EncodeToString(ctx.LastSerialBuffer)
-			}
-		case "2":
-			return func() string {
-				if ctx.LastExecResult == nil {
-					return "nil"
-				} else {
-					return ctx.LastExecResult.Error()
-				}
-			}()
-		default: // 普通变量
-			res := FmtGetVar(v, ctx)
-			if res != nil {
-				switch v := res.(type) {
-				case int:
-					return strconv.Itoa(v)
-				case []int:
-					return func() string {
-						b := strings.Builder{}
-						for _, n := range v {
-							b.WriteByte(byte(n))
-						}
-						return b.String()
-					}()
-				}
-			}
+		switch resVar := res.(type) {
+		case string:
+			return resVar
+		default:
+			return fmt.Sprintf("%v", resVar)
 		}
-		return "[nil]"
 	})
 }
 
 // 取变量值，如{test}, {res:1,5}, 输入varName字符串不带{}
 // 返回值为整数或整数数组
 func FmtGetVar(varFmt string, ctx *ActionContext) any {
-	if strings.Contains(varFmt, ":") {
-		arrFmtStrings := strings.Split(varFmt, ":")
-		arrIndexBegin, arrIndexEnd := -1, -1
-		varName := arrFmtStrings[0]
-		v, has := ctx.variableMap[varName]
-		if !has {
-			return nil
-		}
+	arrFmtStrings := strings.Split(varFmt, ":")
+	arrIndexBegin, arrIndexEnd := -1, -1
+	varName := arrFmtStrings[0]
 
-		if v.varType != VarNumberArray {
-			return nil
-		}
-
-		vArr := v.v.([]int)
-
+	if len(arrFmtStrings) > 1 {
 		arrIndexStrings := strings.Split(arrFmtStrings[1], ",")
 
 		if len(arrIndexStrings) == 2 { // 范围
@@ -110,29 +67,68 @@ func FmtGetVar(varFmt string, ctx *ActionContext) any {
 			arrIndexBegin = begin
 		}
 
+		// 解析错误
 		if arrIndexBegin == -1 {
+			return nil
+		}
+
+		// 上界小于下界
+		if arrIndexEnd != -1 && arrIndexEnd < arrIndexBegin {
+			return nil
+		}
+	}
+
+	switch varName[0] {
+	case '0':
+		return ctx.LastActionName
+	case '1':
+		if arrIndexBegin > len(ctx.LastSerialBuffer)-1 || arrIndexEnd > len(ctx.LastSerialBuffer)-1 {
+			return nil
+		}
+		if arrIndexBegin != -1 && arrIndexEnd == -1 {
+			return ctx.LastSerialBuffer[arrIndexBegin]
+		} else if arrIndexBegin != -1 {
+			return ctx.LastSerialBuffer[arrIndexBegin:arrIndexEnd]
+		} else {
+			return ctx.LastSerialBuffer
+		}
+	case '2':
+		return func() any {
+			if ctx.LastExecResult == nil {
+				return nil
+			} else {
+				return ctx.LastExecResult.Error()
+			}
+		}()
+	default:
+		v, has := ctx.variableMap[varName]
+		if !has {
+			return nil
+		}
+
+		if v.varType != VarNumberArray {
+			return nil
+		}
+
+		vArr := v.v.([]int)
+
+		if arrIndexEnd > len(vArr)-1 {
+			return nil
+		}
+
+		if arrIndexBegin > len(vArr)-1 {
 			return nil
 		}
 
 		if arrIndexEnd != -1 {
 			return vArr[arrIndexBegin:arrIndexEnd]
-		} else {
+		} else if arrIndexBegin != -1 {
 			return vArr[arrIndexBegin]
-		}
-
-	} else {
-		v, has := ctx.variableMap[varFmt]
-		if !has {
-			return nil
-		}
-		switch v.varType {
-		case VarNumber:
-			return v.v.(int)
-		case VarNumberArray:
-			return v.v.([]int)
+		} else {
+			return vArr
 		}
 	}
-	return nil
+
 }
 
 func FmtEvalCondition(format string, ctx *ActionContext) (bool, error) {
@@ -300,6 +296,7 @@ func compareNum(lv, rv int) int {
 func toBool(v int) bool {
 	return v > 0
 }
+
 func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 	switch a.Type {
 	case NodeOp:
@@ -313,23 +310,62 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 			return false, err
 		}
 
+		lvo := 0
+		rvo := 0
+
+		switch t := lv.(type) {
+		case int:
+			lvo = t
+		case bool:
+			lvo = func() int {
+				if t {
+					return 1
+				}
+				return 0
+			}()
+		case int64:
+			lvo = int(t)
+		case uint8:
+			lvo = int(t)
+		default:
+			return nil, fmt.Errorf("unsupport type %V", t)
+		}
+
+		switch t := rv.(type) {
+		case int:
+			rvo = t
+		case bool:
+			rvo = func() int {
+				if t {
+					return 1
+				}
+				return 0
+			}()
+		case int64:
+			rvo = int(t)
+		case uint8:
+			rvo = int(t)
+		default:
+			return nil, fmt.Errorf("unsupport type %V", t)
+		}
+
 		switch a.Value {
 		case "==":
-			return compareEq(lv.(int), rv.(int)), nil
+			return compareEq(lvo, rvo), nil
 		case "!=":
-			return !compareEq(lv.(int), rv.(int)), nil
+			return !compareEq(lvo, rvo), nil
 		case "||":
-			return toBool(lv.(int)) || toBool(rv.(int)), nil
+			return toBool(lvo) || toBool(rvo), nil
 		case "&&":
-			return toBool(lv.(int)) && toBool(rv.(int)), nil
+			return toBool(lvo) && toBool(rvo), nil
 		case "<":
-			return compareNum(lv.(int), rv.(int)) < 0, nil
+			return compareNum(lvo, rvo) < 0, nil
 		case ">":
-			return compareNum(lv.(int), rv.(int)) > 0, nil
+			return compareNum(lvo, rvo) > 0, nil
 		case "<=":
-			return compareNum(lv.(int), rv.(int)) <= 0, nil
+			return compareNum(lvo, rvo) <= 0, nil
 		case ">=":
-			return compareNum(lv.(int), rv.(int)) >= 0, nil
+			return compareNum(lvo, rvo) >= 0, nil
 		}
 	case NodeConst:
 		n, err := strconv.ParseInt(a.Value, 0, 64)
@@ -338,11 +374,13 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 		}
 		return n, nil
 	case NodeVar:
-		v := FmtGetVar(a.Value[1:len(a.Value)-2], ctx)
+		v := FmtGetVar(a.Value[1:len(a.Value)-1], ctx)
 		switch t := v.(type) {
 		case string:
 			return false, errors.New("node var cannot be string")
-		case int:
+		case nil:
+			return nil, fmt.Errorf("wrong var[%v]", a.Value[1:len(a.Value)-1])
+		default:
 			return t, nil
 		}
 	}

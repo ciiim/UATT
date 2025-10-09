@@ -21,9 +21,10 @@ type Manager struct {
 	ctx context.Context
 
 	// App文件存放文件夹
-	appFolder    string
-	appFileNames []string
-	nowApp       *App
+	appFolder     string
+	appFileNames  []string
+	nowApp        *App
+	runningEngine *ActionEngine
 }
 
 var ErrNotFoundApp error = errors.New("could not found app")
@@ -89,11 +90,17 @@ func (m *Manager) Start() error {
 		return ErrNotFoundApp
 	}
 
+	if err := GlobalSerial.OpenSerial(); err != nil {
+		return err
+	}
+
 	engine := NewActionEngine(m.nowApp)
 
 	if err := engine.PreCompile(); err != nil {
 		return err
 	}
+
+	m.runningEngine = engine
 
 	engine.StartAsync()
 
@@ -101,7 +108,16 @@ func (m *Manager) Start() error {
 }
 
 func (m *Manager) Stop() error {
-	return nil
+
+	if m.runningEngine == nil {
+		return nil
+	}
+
+	m.runningEngine.Stop()
+
+	m.runningEngine = nil
+
+	return GlobalSerial.CloseSerial()
 }
 
 func (m *Manager) GetAppSettings() (AppConfigSettings, error) {
@@ -324,4 +340,8 @@ func (m *Manager) SaveApp() error {
 
 func (m *Manager) GetAllSerial() ([]string, error) {
 	return GlobalSerial.GetAllPort()
+}
+
+func (m *Manager) SelectSerialCom(com string) {
+	GlobalSerial.SelectPort(com)
 }

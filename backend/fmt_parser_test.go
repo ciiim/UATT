@@ -2,17 +2,13 @@ package bsd_testtool_test
 
 import (
 	bsd_testtool "bsd_testtool/backend"
-	"errors"
 	"fmt"
 	"testing"
 )
 
 func TestFmtParse(t *testing.T) {
-	fmt.Printf("parse: %v\n", bsd_testtool.FmtSprintf("action_name {0}, recv {1}, res {2}", &bsd_testtool.ActionContext{
-		LastActionName:   "Send 11",
-		LastSerialBuffer: []byte{0xAA, 0xFF, 0x01, 0x05},
-		LastExecResult:   errors.New("Test Error"),
-	}))
+	fmt.Printf("parse: %v\n", bsd_testtool.FmtSprintf("action_name {0}, recv {1:2}, res {2}, {test}",
+		&bsd_testtool.TestActionContext))
 }
 
 func TestTokenize(t *testing.T) {
@@ -28,7 +24,7 @@ func TestTokenize(t *testing.T) {
 }
 
 func TestParser(t *testing.T) {
-	str := "{1:6} == 1"
+	str := "{1:1} == 0x01 && (1 == 1 || 1 > 0)"
 
 	p := bsd_testtool.NewParser(str)
 
@@ -39,5 +35,12 @@ func TestParser(t *testing.T) {
 	t.Logf("ast: %v\n", ast)
 
 	ast.Pretty("", true)
+
+	is, err := ast.Eval(&bsd_testtool.TestActionContext)
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Printf("is: %v\n", is)
 
 }

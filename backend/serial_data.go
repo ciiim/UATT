@@ -3,8 +3,11 @@ package bsd_testtool
 import (
 	"bsd_testtool/backend/types"
 	"bytes"
+	"errors"
 	"fmt"
 )
+
+var ErrCheckFailed = errors.New("check failed")
 
 func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error) {
 	totalLength := 0
@@ -21,11 +24,18 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 
 	// 依次解析SubModule
 	for i, sm := range s.Modules {
-		length, resBytes = sm.getBasicInfo()
+		switch sm.(type) {
+		// Fill的先不算总长度，读出了数据之后再计算进去，不然要读两次数据，浪费空间
+		case *IOFillModule:
+			break
+		default:
+			length, resBytes = sm.getBasicInfo()
 
-		totalLength += length
-		// 其中可能会有一些resBytes是nil
-		ctx.subBytes[i] = resBytes
+			totalLength += length
+			// 其中可能会有一些resBytes是nil
+			ctx.subBytes[i] = resBytes
+		}
+
 	}
 
 	// fmt.Printf("total length:%d\n", totalLength)
@@ -35,6 +45,7 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 		switch t := sm.(type) {
 		case *IOFillModule:
 			_, resBytes, err = t.fill(actionCtx)
+			totalLength += len(resBytes)
 		case *IOCalcModule:
 			_, resBytes, err = t.calc(ctx)
 		default:
@@ -52,6 +63,7 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 		switch t := sm.(type) {
 		case *IOFillModule:
 			_, resBytes, err = t.fill(actionCtx)
+			totalLength += len(resBytes)
 		case *IOCalcModule:
 			_, resBytes, err = t.calc(ctx)
 		default:
@@ -74,16 +86,48 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 	return fullBytes, nil
 }
 
-// 如果检查不过，返回检查不过的模块UID
-func CheckReceiveBytesArray(r *ReceiveAction, actionCtx *ActionContext, checkBytes []byte) (types.ActionUID, error) {
+// 如果检查不过，返回第一个检查不过的模块UID
+func CheckReceiveBytesArray(r *ReceiveAction, actionCtx *ActionContext, modCtx *IOModuleCtx) (types.ActionUID, error) {
 
-	// 依次检查非计算类模块同时拆分待检查的切片
+	// 检查模块计算结果
+	for _, sm := range modCtx.moduleUIDMap {
+		switch t := sm.(type) {
+		case *IOFillModule:
+			e, err := t.check(actionCtx, modCtx.subBytes[t.GetIndex()])
+			if err != nil {
+				return t.GetUID(), err
+			}
+			if !e {
+				return t.GetUID(), ErrCheckFailed
+			}
+		case *IOFixedModule:
+			e, err := t.check(modCtx.subBytes[t.GetIndex()])
+			if err != nil {
+				return t.GetUID(), err
+			}
+			if !e {
+				return t.GetUID(), ErrCheckFailed
+			}
+		case *IOCustomModule:
+			e, err := t.check(modCtx.subBytes[t.GetIndex()])
+			if err != nil {
+				return t.GetUID(), err
+			}
+			if !e {
+				return t.GetUID(), ErrCheckFailed
+			}
+		case *IOCalcModule:
+			e, err := t.check(modCtx, modCtx.subBytes[t.GetIndex()])
+			if err != nil {
+				return t.GetUID(), err
+			}
+			if !e {
+				return t.GetUID(), ErrCheckFailed
+			}
+		default:
+			return -1, fmt.Errorf("unsupport sub module type, UID: %d", sm.GetUID())
+		}
+	}
 
-	// 检查Now模块计算结果
-
-	// 检查Post模块计算结果
-
-	// bytes里面的-1是代表不检查这一项
-
-	return 0, nil
+	return -1, nil
 }

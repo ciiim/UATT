@@ -92,8 +92,6 @@ type ActionContext struct {
 
 	log io.WriteCloser
 
-	stepCh chan int
-
 	controller *EnginControllor
 
 	serial *Serial
@@ -115,11 +113,17 @@ type ActionEngine struct {
 	app *App
 
 	ctx *ActionContext
+
+	stepCh chan struct{}
+
+	stoppedCh chan struct{}
 }
 
 func NewActionEngine(app *App) *ActionEngine {
 	return &ActionEngine{
-		app: app,
+		app:       app,
+		stepCh:    make(chan struct{}, 2),
+		stoppedCh: make(chan struct{}),
 	}
 }
 
@@ -135,7 +139,6 @@ func (a *ActionEngine) PreCompile() error {
 		variableMap:      make(map[string]*variable),
 		controlFlowMap:   make(map[types.ActionUID]*controlFlow),
 		labelMap:         make(map[string]types.ActionUID),
-		stepCh:           make(chan int, 2),
 		nowAction:        nil,
 		LastActionName:   "NIL",
 		LastSerialBuffer: nil,
@@ -167,11 +170,9 @@ func (a *ActionEngine) PreCompile() error {
 				varType: tmp.VarType,
 			}
 			switch tmp.VarType {
-			case "number":
+			case VarNumber:
 				v.v = tmp.VarNumberValue
-			case "string":
-				v.v = tmp.VarStringValue
-			case "bytesarray":
+			case VarNumberArray:
 				v.v = tmp.VarByteArrayValue
 			}
 			a.ctx.variableMap[tmp.VarName] = v
@@ -300,7 +301,7 @@ func (a *ActionEngine) innerStart() error {
 
 		if action.breakPoint {
 			a.ctx.nowActionStatus = WaitingStep
-			_, ok := <-a.ctx.stepCh
+			_, ok := <-a.stepCh
 			if !ok {
 				break
 			}
@@ -320,7 +321,16 @@ func (a *ActionEngine) innerStart() error {
 	if a.ctx.LastExecResult != nil {
 		a.ctx.nowActionStatus = ErrorStopped
 	}
-	a.cleanCtx()
+	defer func() {
+		select {
+		case a.stoppedCh <- struct{}{}:
+			a.cleanCtx()
+			return
+		case <-time.After(time.Millisecond * 50):
+			a.cleanCtx()
+			return
+		}
+	}()
 	return a.ctx.LastExecResult
 }
 
@@ -336,11 +346,12 @@ func (a *ActionEngine) control() error {
 	con := a.ctx.controller
 	a.ctx.controller = nil
 
-	if con.nextUID == StopUID {
+	switch con.nextUID {
+	case StopUID:
 		a.ctx.nowAction = a.ctx.actionFirst
-	} else if con.nextUID == DummyUID {
+	case DummyUID:
 		a.ctx.nowAction = a.ctx.nowAction.next
-	} else {
+	default:
 		a.ctx.nowAction = a.ctx.actionUIDMap[con.nextUID]
 	}
 	return nil
@@ -350,13 +361,16 @@ func (a *ActionEngine) Step() {
 	if a.ctx.nowActionStatus != WaitingStep {
 		return
 	}
-	a.ctx.stepCh <- 0
+	a.stepCh <- struct{}{}
 }
 
 func (a *ActionEngine) Stop() {
-	a.cleanCtx()
+	a.ctx.nowActionStatus = WaitingStop
+	<-a.stoppedCh
+
 }
 
 func (a *ActionEngine) cleanCtx() {
-	close(a.ctx.stepCh)
+	close(a.stepCh)
+	close(a.stoppedCh)
 }

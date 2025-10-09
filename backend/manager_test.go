@@ -4,6 +4,7 @@ import (
 	bsd_testtool "bsd_testtool/backend"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestManagerInit(t *testing.T) {
@@ -36,6 +37,10 @@ func TestManagerLoadConfig(t *testing.T) {
 	if err := ae.StartSync(); err != nil {
 		t.Error(err)
 	}
+
+	time.Sleep(time.Second)
+
+	ae.Stop()
 
 	fmt.Printf("ae.GetStopReason(): %v\n", ae.GetStopReason())
 

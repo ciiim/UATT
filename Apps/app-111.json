@@ -88,7 +88,6 @@
             "BreakPoint": false,
             "TypeFeatureField": {
                 "TimeoutMs": 1000,
-                "ReceiveLengthUID": 1111,
                 "Modules": [
                     {
                         "Index": 0,
