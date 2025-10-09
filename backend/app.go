@@ -14,10 +14,10 @@ var ErrOutOfIndex = errors.New("out of index")
 var ErrNotFoundInsertAction = errors.New("not found insert action")
 
 type SerialConfig struct {
-	BaudRate int
-	DataBits int
-	Parity   string
-	StopBits int
+	BaudRate int    `json:"BaudRate"`
+	DataBits int    `json:"DataBits"`
+	Parity   string `json:"Parity"`
+	StopBits int    `json:"StopBits"`
 }
 
 type Action struct {

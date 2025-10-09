@@ -10,26 +10,16 @@ type IConfig interface {
 }
 
 type AppConfigSettings struct {
-	AppName      string `json:"AppName"`
-	SerialConfig struct {
-		BaudRate int    `json:"BaudRate"`
-		DataBits int    `json:"DataBits"`
-		Parity   string `json:"Parity"`
-		StopBits int    `json:"StopBits"`
-	} `json:"SerialConfig"`
-	LogEnable         bool   `json:"LogEnable"`
-	LogExportEnable   bool   `json:"LogExportEnable"`
-	LogExportLoaction string `json:"LogExportLoaction"`
+	AppName           string       `json:"AppName"`
+	SerialConfig      SerialConfig `json:"SerialConfig"`
+	LogEnable         bool         `json:"LogEnable"`
+	LogExportEnable   bool         `json:"LogExportEnable"`
+	LogExportLoaction string       `json:"LogExportLoaction"`
 }
 
 type AppConfig struct {
-	AppName      string `json:"AppName"`
-	SerialConfig struct {
-		BaudRate int    `json:"BaudRate"`
-		DataBits int    `json:"DataBits"`
-		Parity   string `json:"Parity"`
-		StopBits int    `json:"StopBits"`
-	} `json:"SerialConfig"`
+	AppName           string             `json:"AppName"`
+	SerialConfig      SerialConfig       `json:"SerialConfig"`
 	LogEnable         bool               `json:"LogEnable"`
 	LogExportEnable   bool               `json:"LogExportEnable"`
 	LogExportLoaction string             `json:"LogExportLoaction"`

@@ -2,10 +2,13 @@ package bsd_testtool
 
 import (
 	"bsd_testtool/backend/types"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -52,6 +55,10 @@ const (
 
 	// 因错误停止
 	ErrorStopped
+
+	StepMode
+
+	StepModeWaiting
 )
 
 type controlFlow struct {
@@ -112,6 +119,8 @@ func (ctx *ActionContext) SetController(con *EnginControllor) {
 type ActionEngine struct {
 	app *App
 
+	wailsCtx context.Context
+
 	ctx *ActionContext
 
 	stepCh chan struct{}
@@ -119,7 +128,7 @@ type ActionEngine struct {
 	stoppedCh chan struct{}
 }
 
-func NewActionEngine(app *App) *ActionEngine {
+func NewActionEngine(app *App, ctx context.Context) *ActionEngine {
 	return &ActionEngine{
 		app:       app,
 		stepCh:    make(chan struct{}, 2),
@@ -292,6 +301,12 @@ func (a *ActionEngine) StartAsync() {
 	go a.innerStart()
 }
 
+func (a *ActionEngine) StepAsyncStart() {
+	a.ctx.nowAction = a.ctx.actionFirst.next
+	a.ctx.nowActionStatus = StepMode
+	go a.innerStart()
+}
+
 func (a *ActionEngine) innerStart() error {
 	for a.ctx.nowAction.actionUID != DummyUID && a.ctx.nowActionStatus != WaitingStop {
 		action := a.ctx.nowAction
@@ -299,18 +314,31 @@ func (a *ActionEngine) innerStart() error {
 		fmt.Printf("now action name %s, UID:%d\n", action.name, action.actionUID)
 		time.Sleep(time.Millisecond * 500)
 
-		if action.breakPoint {
+		if action.breakPoint || a.ctx.nowActionStatus == StepMode {
 			a.ctx.nowActionStatus = WaitingStep
 			_, ok := <-a.stepCh
 			if !ok {
 				break
 			}
-
 		}
 
 		a.ctx.LastExecResult = a.doAction(action.action)
 
 		a.ctx.LastActionName = action.name
+
+		if a.wailsCtx != nil {
+			runtime.EventsEmit(a.wailsCtx, "action-done", struct {
+				ActionResult string `json:"ActionResult"`
+			}{
+				ActionResult: func() string {
+					if a.ctx.LastExecResult != nil {
+						return a.ctx.LastExecResult.Error()
+					} else {
+						return ""
+					}
+				}(),
+			})
+		}
 
 		if err := a.control(); err != nil {
 			a.ctx.nowActionStatus = ErrorStopped
@@ -357,17 +385,19 @@ func (a *ActionEngine) control() error {
 	return nil
 }
 
-func (a *ActionEngine) Step() {
-	if a.ctx.nowActionStatus != WaitingStep {
-		return
+func (a *ActionEngine) Step() error {
+	if a.ctx.nowActionStatus != WaitingStep || a.ctx.nowActionStatus == StepMode {
+		return nil
 	}
 	a.stepCh <- struct{}{}
+	return nil
 }
 
 func (a *ActionEngine) Stop() {
-	a.ctx.nowActionStatus = WaitingStop
-	<-a.stoppedCh
 
+	a.ctx.nowActionStatus = WaitingStop
+	<-a.stepCh
+	<-a.stoppedCh
 }
 
 func (a *ActionEngine) cleanCtx() {

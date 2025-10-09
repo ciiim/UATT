@@ -22,13 +22,12 @@ import draggable from 'vuedraggable';
 defineProps<{ actionLibrary: any[] }>();
 
 const onClone = (evt: any) => {
-
   let newAction : ConfigActionBase = {
     ActionUID: Date.now(),
     ActionType: evt.actionType,
     ActionTypeID: evt.actionID,
     Name: evt.name,
-    TypeFeatureField: evt.feat,
+    TypeFeatureField: JSON.parse(JSON.stringify(evt.feat)),
     BreakPoint: false,
   } 
   

@@ -30,7 +30,7 @@ func TestManagerLoadConfig(t *testing.T) {
 	t.Log(err)
 	app := bsd_testtool.GlobalManager.GetNowApp()
 
-	ae := bsd_testtool.NewActionEngine(app)
+	ae := bsd_testtool.NewActionEngine(app, nil)
 
 	fmt.Printf("ae.PreCompile(): %v\n", ae.PreCompile())
 

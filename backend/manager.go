@@ -85,6 +85,40 @@ func (m *Manager) GetNowApp() *App {
 	return m.nowApp
 }
 
+func (m Manager) StepStart() error {
+	if m.nowApp == nil {
+		return ErrNotFoundApp
+	}
+
+	if err := GlobalSerial.OpenSerial(); err != nil {
+		return err
+	}
+
+	engine := NewActionEngine(m.nowApp, m.ctx)
+
+	if err := engine.PreCompile(); err != nil {
+		return err
+	}
+
+	m.runningEngine = engine
+
+	engine.StepAsyncStart()
+
+	return nil
+}
+
+func (m *Manager) DoStep() error {
+	if m.nowApp == nil {
+		return ErrNotFoundApp
+	}
+	if m.runningEngine == nil {
+		return ErrNotFoundApp
+	}
+
+	m.runningEngine.Step()
+	return nil
+}
+
 func (m *Manager) Start() error {
 	if m.nowApp == nil {
 		return ErrNotFoundApp
@@ -94,7 +128,7 @@ func (m *Manager) Start() error {
 		return err
 	}
 
-	engine := NewActionEngine(m.nowApp)
+	engine := NewActionEngine(m.nowApp, m.ctx)
 
 	if err := engine.PreCompile(); err != nil {
 		return err
@@ -291,13 +325,8 @@ func (m *Manager) SaveApp() error {
 
 	//重新组装AppConfig
 	config := AppConfig{
-		AppName: m.nowApp.AppName,
-		SerialConfig: struct {
-			BaudRate int    "json:\"BaudRate\""
-			DataBits int    "json:\"DataBits\""
-			Parity   string "json:\"Parity\""
-			StopBits int    "json:\"StopBits\""
-		}(*m.nowApp.serialConfig),
+		AppName:           m.nowApp.AppName,
+		SerialConfig:      (SerialConfig)(*m.nowApp.serialConfig),
 		LogEnable:         m.nowApp.logEnable,
 		LogExportEnable:   m.nowApp.logExportEnable,
 		LogExportLoaction: m.nowApp.logExportLoaction,

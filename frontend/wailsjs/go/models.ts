@@ -12,10 +12,27 @@ export namespace bsd_testtool {
 	        this.AppName = source["AppName"];
 	    }
 	}
+	export class SerialConfig {
+	    BaudRate: number;
+	    DataBits: number;
+	    Parity: string;
+	    StopBits: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SerialConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.BaudRate = source["BaudRate"];
+	        this.DataBits = source["DataBits"];
+	        this.Parity = source["Parity"];
+	        this.StopBits = source["StopBits"];
+	    }
+	}
 	export class AppConfigSettings {
 	    AppName: string;
-	    // Go type: struct { BaudRate int "json:\"BaudRate\""; DataBits int "json:\"DataBits\""; Parity string "json:\"Parity\""; StopBits int "json:\"StopBits\"" }
-	    SerialConfig: any;
+	    SerialConfig: SerialConfig;
 	    LogEnable: boolean;
 	    LogExportEnable: boolean;
 	    LogExportLoaction: string;
@@ -27,7 +44,7 @@ export namespace bsd_testtool {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.AppName = source["AppName"];
-	        this.SerialConfig = this.convertValues(source["SerialConfig"], Object);
+	        this.SerialConfig = this.convertValues(source["SerialConfig"], SerialConfig);
 	        this.LogEnable = source["LogEnable"];
 	        this.LogExportEnable = source["LogExportEnable"];
 	        this.LogExportLoaction = source["LogExportLoaction"];

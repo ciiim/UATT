@@ -18,6 +18,10 @@ export function GetAllAppName() {
   return window['go']['bsd_testtool']['Manager']['GetAllAppName']();
 }
 
+export function GetAllSerial() {
+  return window['go']['bsd_testtool']['Manager']['GetAllSerial']();
+}
+
 export function GetAppSettings() {
   return window['go']['bsd_testtool']['Manager']['GetAppSettings']();
 }
@@ -36,6 +40,22 @@ export function LoadApp(arg1) {
 
 export function SaveApp() {
   return window['go']['bsd_testtool']['Manager']['SaveApp']();
+}
+
+export function SelectSerialCom(arg1) {
+  return window['go']['bsd_testtool']['Manager']['SelectSerialCom'](arg1);
+}
+
+export function Start() {
+  return window['go']['bsd_testtool']['Manager']['Start']();
+}
+
+export function StepStart() {
+  return window['go']['bsd_testtool']['Manager']['StepStart']();
+}
+
+export function Stop() {
+  return window['go']['bsd_testtool']['Manager']['Stop']();
 }
 
 export function SyncActions(arg1) {

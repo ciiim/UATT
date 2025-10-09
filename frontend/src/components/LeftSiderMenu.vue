@@ -95,6 +95,7 @@ import { DeleteOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { GetAllAppName, LoadApp, CreateApp, DeleteApp } from "../../wailsjs/go/bsd_testtool/Manager";
 import { message } from "ant-design-vue";
 import { useActionStore } from "../stores/action_store";
+import { bsd_testtool } from "../../wailsjs/go/models";
 
 const apps = ref<string[]>([]);
 const selectedApp = ref<string>("");
@@ -145,7 +146,7 @@ const showAddModal = () => {
 };
 
 // 表单数据
-const formData = ref({
+const formData = ref(new bsd_testtool.AppConfigSettings({
   AppName: "",
   SerialConfig: {
     BaudRate: 9600,
@@ -156,7 +157,7 @@ const formData = ref({
   LogEnable: false,
   LogExportEnable: false,
   LogExportLoaction: "",
-});
+}));
 
 // 提交表单
 const handleAddApp = async () => {

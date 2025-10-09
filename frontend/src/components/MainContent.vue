@@ -43,6 +43,7 @@ import draggable from "vuedraggable";
 
 import { defineProps } from "vue";
 import { useActionStore } from "../stores/action_store";
+import { message } from "ant-design-vue";
 
 const prop = defineProps<{
   actionLibrary: any[];
@@ -85,7 +86,9 @@ const drag = ref(false);
 const selectAction = (action: any) => {
   nowSelectedAction.value = action;
   store.selectedAction = action;
+  console.log(store.selectedAction?.TypeFeatureField);
   
+  // message.info('选择:'+ nowSelectedAction.value?.ActionUID)
 };
 </script>
 

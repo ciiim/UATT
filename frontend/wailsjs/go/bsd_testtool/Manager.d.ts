@@ -10,6 +10,8 @@ export function GetActionList():Promise<Array<bsd_testtool.ConfigActionBaseJson>
 
 export function GetAllAppName():Promise<Array<string>>;
 
+export function GetAllSerial():Promise<Array<string>>;
+
 export function GetAppSettings():Promise<bsd_testtool.AppConfigSettings>;
 
 export function GetNowApp():Promise<bsd_testtool.App>;
@@ -19,6 +21,14 @@ export function Init(arg1:string):Promise<void>;
 export function LoadApp(arg1:string):Promise<void>;
 
 export function SaveApp():Promise<void>;
+
+export function SelectSerialCom(arg1:string):Promise<void>;
+
+export function Start():Promise<void>;
+
+export function StepStart():Promise<void>;
+
+export function Stop():Promise<void>;
 
 export function SyncActions(arg1:Array<bsd_testtool.ConfigActionBaseJson>):Promise<void>;
 

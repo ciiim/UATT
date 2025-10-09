@@ -302,14 +302,12 @@ const store = useActionStore();
 
 const newModuleType = ref<number | null>(null);
 
-const emit = defineEmits<{
-  (e: "update-tags", updatedAction: ConfigActionBase): void;
-}>();
 
 // 当 TypeFeatureField 变化时调用
 watch(
   () => store.selectedAction?.TypeFeatureField,
   (newVal) => {
+    
     if (store.selectedAction) {
       const sa = store.selectedAction as any;
       sa.tags = parseActionTags(store.selectedAction);

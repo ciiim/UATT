@@ -11,3 +11,18 @@ export interface Tag {
   label: string;
   len: number;
 }
+
+export interface SerialConfig {
+  BaudRate: number;
+	DataBits: number;
+	Parity: string;
+	StopBits: number;
+}
+
+export interface AppConfigSettings {
+  AppName: string;
+	SerialConfig: SerialConfig;
+	LogEnable: boolean;
+	LogExportEnable: boolean;
+	LogExportLoaction: string;
+}

@@ -118,6 +118,7 @@ const actionLibrary = ref([
   {name: '发送', actionID: 1, actionType: 'IO', feat : {TimeoutMs: 1000, Modules: []}},
   {name: '接收', actionID: 2, actionType: 'IO', feat : {TimeoutMs: 1000, Modules: []}},
   {name: 'PRINT', actionID: 90, actionType: 'Debug', feat : {PrintFmt: ""}},
+  {name: 'Delay', actionID: 91, actionType: 'Debug', feat : {DelayMs: 0}},
   {name: 'IF', actionID: 24, actionType: 'Control', feat : {Condition: ""}},
   {name: 'ELSE', actionID: 25, actionType: 'Control', feat : {}},
   {name: 'EndBlock', actionID: 27, actionType: 'Control', feat : {}},
