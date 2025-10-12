@@ -6,6 +6,8 @@ export function CreateApp(arg1:bsd_testtool.AppConfigSettings):Promise<void>;
 
 export function DeleteApp(arg1:string):Promise<void>;
 
+export function DoStep():Promise<void>;
+
 export function GetActionList():Promise<Array<bsd_testtool.ConfigActionBaseJson>>;
 
 export function GetAllAppName():Promise<Array<string>>;

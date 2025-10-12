@@ -10,6 +10,10 @@ export function DeleteApp(arg1) {
   return window['go']['bsd_testtool']['Manager']['DeleteApp'](arg1);
 }
 
+export function DoStep() {
+  return window['go']['bsd_testtool']['Manager']['DoStep']();
+}
+
 export function GetActionList() {
   return window['go']['bsd_testtool']['Manager']['GetActionList']();
 }

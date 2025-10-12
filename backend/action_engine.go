@@ -38,6 +38,8 @@ type variable struct {
 
 type ActionStatus int
 
+type EngineMode int
+
 const (
 	Idle ActionStatus = iota
 
@@ -55,10 +57,12 @@ const (
 
 	// 因错误停止
 	ErrorStopped
+)
 
-	StepMode
+const (
+	Continuous EngineMode = iota
 
-	StepModeWaiting
+	Step
 )
 
 type controlFlow struct {
@@ -97,7 +101,9 @@ type ActionContext struct {
 
 	nowActionStatus ActionStatus
 
-	log io.WriteCloser
+	engineMode EngineMode
+
+	log []io.WriteCloser
 
 	controller *EnginControllor
 
@@ -116,6 +122,25 @@ func (ctx *ActionContext) SetController(con *EnginControllor) {
 	ctx.controller = con
 }
 
+type wailsLog struct {
+	ctx context.Context
+}
+
+func (w *wailsLog) Write(b []byte) (int, error) {
+	runtime.EventsEmit(w.ctx, "runtime-log", fmt.Sprintf("[INFO] %s\n", b))
+	return len(b), nil
+}
+
+func (w *wailsLog) Close() error {
+	return nil
+}
+
+func getWailsRuntimeLog(ctx context.Context) io.WriteCloser {
+	return &wailsLog{
+		ctx: ctx,
+	}
+}
+
 type ActionEngine struct {
 	app *App
 
@@ -126,13 +151,17 @@ type ActionEngine struct {
 	stepCh chan struct{}
 
 	stoppedCh chan struct{}
+
+	stopCB func()
 }
 
-func NewActionEngine(app *App, ctx context.Context) *ActionEngine {
+func NewActionEngine(app *App, ctx context.Context, stopCB func()) *ActionEngine {
 	return &ActionEngine{
 		app:       app,
 		stepCh:    make(chan struct{}, 2),
 		stoppedCh: make(chan struct{}),
+		wailsCtx:  ctx,
+		stopCB:    stopCB,
 	}
 }
 
@@ -142,7 +171,7 @@ func (a *ActionEngine) PreCompile() error {
 	}
 
 	a.ctx = &ActionContext{
-		log:              a.app.log,
+		log:              a.app.logs,
 		actionFirst:      a.app.firstAction,
 		actionUIDMap:     a.app.actionMap,
 		variableMap:      make(map[string]*variable),
@@ -155,6 +184,8 @@ func (a *ActionEngine) PreCompile() error {
 		nowActionStatus:  Idle,
 		serial:           &GlobalSerial,
 	}
+
+	a.ctx.log = append(a.ctx.log, getWailsRuntimeLog(a.wailsCtx))
 
 	type tempControlInfo struct {
 		ct types.ActionTypeID
@@ -292,29 +323,67 @@ func (a *ActionEngine) GetStopReason() error {
 func (a *ActionEngine) StartSync() error {
 	a.ctx.nowAction = a.ctx.actionFirst.next
 	a.ctx.nowActionStatus = Running
+	a.ctx.engineMode = Continuous
+
 	return a.innerStart()
 }
 
 func (a *ActionEngine) StartAsync() {
 	a.ctx.nowAction = a.ctx.actionFirst.next
 	a.ctx.nowActionStatus = Running
+	a.ctx.engineMode = Continuous
 	go a.innerStart()
 }
 
 func (a *ActionEngine) StepAsyncStart() {
 	a.ctx.nowAction = a.ctx.actionFirst.next
-	a.ctx.nowActionStatus = StepMode
+	a.ctx.nowActionStatus = Running
+	a.ctx.engineMode = Step
 	go a.innerStart()
 }
 
+type ActionReportStatus = int
+
+const (
+	Ready ActionReportStatus = iota
+	Now
+	Done
+)
+
+type ActionReport struct {
+	ActionName string          `json:"ActionName"`
+	ActionUID  types.ActionUID `json:"ActionUID"`
+	Result     string          `json:"Result"`
+}
+
 func (a *ActionEngine) innerStart() error {
+
+	if a.wailsCtx != nil {
+		runtime.EventsEmit(a.wailsCtx, "begin-action")
+	}
 	for a.ctx.nowAction.actionUID != DummyUID && a.ctx.nowActionStatus != WaitingStop {
 		action := a.ctx.nowAction
 
 		fmt.Printf("now action name %s, UID:%d\n", action.name, action.actionUID)
-		time.Sleep(time.Millisecond * 500)
+		// time.Sleep(time.Millisecond * 500)
 
-		if action.breakPoint || a.ctx.nowActionStatus == StepMode {
+		if a.ctx.engineMode == Continuous {
+			if action.breakPoint {
+				a.ctx.nowActionStatus = WaitingStep
+				_, ok := <-a.stepCh
+				if !ok {
+					break
+				}
+			}
+		} else if a.ctx.engineMode == Step {
+			// 单步模式下，汇报即将执行的Action信息 用于引导UI显示
+			if a.wailsCtx != nil {
+				runtime.EventsEmit(a.wailsCtx, "ready-action", ActionReport{
+					ActionName: action.name,
+					ActionUID:  action.actionUID,
+					Result:     "",
+				})
+			}
 			a.ctx.nowActionStatus = WaitingStep
 			_, ok := <-a.stepCh
 			if !ok {
@@ -322,22 +391,35 @@ func (a *ActionEngine) innerStart() error {
 			}
 		}
 
+		if a.wailsCtx != nil {
+			runtime.EventsEmit(a.wailsCtx, "now-action", ActionReport{
+				ActionName: action.name,
+				ActionUID:  action.actionUID,
+				Result:     "",
+			})
+		} else {
+			println("no wails ctx")
+		}
+
 		a.ctx.LastExecResult = a.doAction(action.action)
 
 		a.ctx.LastActionName = action.name
 
+		// 汇报执行结果
 		if a.wailsCtx != nil {
-			runtime.EventsEmit(a.wailsCtx, "action-done", struct {
-				ActionResult string `json:"ActionResult"`
-			}{
-				ActionResult: func() string {
+			runtime.EventsEmit(a.wailsCtx, "done-action", ActionReport{
+				ActionName: action.name,
+				ActionUID:  action.actionUID,
+				Result: func() string {
 					if a.ctx.LastExecResult != nil {
 						return a.ctx.LastExecResult.Error()
 					} else {
-						return ""
+						return "success"
 					}
 				}(),
 			})
+		} else {
+			println("no wails ctx")
 		}
 
 		if err := a.control(); err != nil {
@@ -359,6 +441,7 @@ func (a *ActionEngine) innerStart() error {
 			return
 		}
 	}()
+	a.ctx.nowActionStatus = Stopped
 	return a.ctx.LastExecResult
 }
 
@@ -386,7 +469,7 @@ func (a *ActionEngine) control() error {
 }
 
 func (a *ActionEngine) Step() error {
-	if a.ctx.nowActionStatus != WaitingStep || a.ctx.nowActionStatus == StepMode {
+	if a.ctx.nowActionStatus != WaitingStep {
 		return nil
 	}
 	a.stepCh <- struct{}{}
@@ -395,12 +478,22 @@ func (a *ActionEngine) Step() error {
 
 func (a *ActionEngine) Stop() {
 
-	a.ctx.nowActionStatus = WaitingStop
-	<-a.stepCh
-	<-a.stoppedCh
+	if a.ctx.engineMode == Step && a.ctx.nowActionStatus == WaitingStep {
+		a.stepCh <- struct{}{}
+	}
+	println("now status", a.ctx.nowActionStatus)
+	if a.ctx.nowActionStatus != Stopped {
+		a.ctx.nowActionStatus = WaitingStop
+		println("waiting stop")
+		<-a.stoppedCh
+	}
 }
 
 func (a *ActionEngine) cleanCtx() {
 	close(a.stepCh)
 	close(a.stoppedCh)
+	runtime.EventsEmit(a.wailsCtx, "stopped")
+	if a.stopCB != nil {
+		a.stopCB()
+	}
 }

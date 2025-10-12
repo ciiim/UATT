@@ -6,6 +6,8 @@ const state = reactive({
   actions: [] as ConfigActionBase[],
   selectedAction: undefined as ConfigActionBase | undefined,
   actionListChanges: [],
+  nowRightSiderTabIndex: 0,
+  logs: [] as string[]
 })
 
 

@@ -29,6 +29,8 @@ const onClone = (evt: any) => {
     Name: evt.name,
     TypeFeatureField: JSON.parse(JSON.stringify(evt.feat)),
     BreakPoint: false,
+    Tags: [],
+    Status: ""
   } 
   
   return newAction

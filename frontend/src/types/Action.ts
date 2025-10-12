@@ -5,6 +5,8 @@ export interface ConfigActionBase {
   Name: string
   BreakPoint: boolean
   TypeFeatureField: any
+  Tags: any[]
+  Status: string
 }
 
 export interface Tag {
@@ -25,4 +27,10 @@ export interface AppConfigSettings {
 	LogEnable: boolean;
 	LogExportEnable: boolean;
 	LogExportLoaction: string;
+}
+
+export interface ActionReport {
+  ActionName : string;
+  ActionUID : number;
+  Result : string;
 }

@@ -41,7 +41,7 @@ type Action struct {
 type App struct {
 	AppName string
 
-	log io.WriteCloser
+	logs []io.WriteCloser
 
 	// 文件名
 	appFileName string
@@ -76,7 +76,7 @@ func NewApp(appFileName string, config *AppConfig) *App {
 		if app.logExportEnable {
 			// TODO: 新建日志文件
 		} else {
-			app.log = os.Stdout
+			app.logs = []io.WriteCloser{os.Stdout}
 		}
 	}
 

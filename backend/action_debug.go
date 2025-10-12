@@ -19,7 +19,9 @@ func (p *PrintAction) doAction(ctx *ActionContext) error {
 
 	var err error
 	if ctx.log != nil {
-		_, err = ctx.log.Write([]byte(printStr))
+		for _, l := range ctx.log {
+			_, err = l.Write([]byte(printStr))
+		}
 	}
 
 	ctx.DefaultNextAction()
@@ -28,6 +30,9 @@ func (p *PrintAction) doAction(ctx *ActionContext) error {
 }
 
 func (d *DelayAction) doAction(ctx *ActionContext) error {
+
+	println("delay", d.DelayMs)
+
 	ms := d.DelayMs
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 

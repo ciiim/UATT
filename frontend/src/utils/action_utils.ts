@@ -1,8 +1,9 @@
 import type { ConfigActionBase, Tag } from "../types/Action";
+import { bsd_testtool } from "../../wailsjs/go/models";
 
-export function parseActionTags(action: ConfigActionBase): Tag[] {
+export function parseActionTags(action: bsd_testtool.ConfigActionBaseJson): Tag[] {
   const tags: Tag[] = []
-  const field = action.TypeFeatureField
+  const field = action.TypeFeatureField as any
 
   if (!field) return tags
 

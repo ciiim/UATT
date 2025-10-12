@@ -1,7 +1,12 @@
 <template>
   <div class="prop-page" v-if="store.selectedAction">
     <h3 style="margin-bottom: 16px; color: black">
-      属性编辑 - {{ store.selectedAction.Name }}
+      Action 编辑
+      <a-form layout="vertical">
+        <a-form-item label="Action名">
+                <a-input v-model:value="store.selectedAction.Name" />
+        </a-form-item>
+      </a-form>
     </h3>
 
     <!-- IO 类模块 -->
@@ -262,10 +267,15 @@
       <a-form layout="vertical">
         <!-- Print -->
         <template v-if="store.selectedAction.ActionTypeID === 90">
-          <a-form-item label="打印格式字符串">
+          <a-form-item 
+          label="打印格式字符串"
+          >
             <a-input
               v-model:value="store.selectedAction.TypeFeatureField.PrintFmt"
             />
+            <a-button type="link" size="small" @click="showHelp">
+              查看说明
+            </a-button>
           </a-form-item>
         </template>
 
@@ -289,6 +299,29 @@
   <div v-else>
     <p style="color: black">请选择一个 Action 编辑属性</p>
   </div>
+
+  <a-modal
+    v-model:open="helpVisible"
+    title="打印格式字符串说明"
+    footer=""
+    width="600px"
+  >
+    <p>可以使用占位符来动态生成打印内容：</p>
+    <ul>
+      <li><code>{0}</code> 上一Action名称</li>
+      <li><code>{1}</code> 上一串口接收数据</li>
+      <li><code>{2}</code> 上一Action执行结果</li>
+      <li><code>{3}</code> 当前时间</li>
+      <li><code>{foo}</code> foo变量的值</li>
+
+    </ul>
+
+    <p>数组下标语法：</p>
+    <ul>
+      <li><code>{goo:0}</code> goo数组的第一个字节 等价于goo[0]</li>
+      <li><code>{goo:0,3}</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
+    </ul>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -302,16 +335,19 @@ const store = useActionStore();
 
 const newModuleType = ref<number | null>(null);
 
+const helpVisible = ref(false);
+const showHelp = () => (helpVisible.value = true);
 
-// 当 TypeFeatureField 变化时调用
 watch(
   () => store.selectedAction?.TypeFeatureField,
   (newVal) => {
     
     if (store.selectedAction) {
       const sa = store.selectedAction as any;
-      sa.tags = parseActionTags(store.selectedAction);
+      sa.Tags = parseActionTags(store.selectedAction);
       store.selectedAction = sa;
+      console.log("change ");
+      
     }
   },
   { deep: true }

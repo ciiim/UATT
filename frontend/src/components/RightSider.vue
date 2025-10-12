@@ -3,8 +3,8 @@
     <div class="content-area">
       <Transition name="fade" mode="out-in">
         <component
-          :is="tabs[tabsIndex]"
-          :key="tabsIndex"
+          :is="tabs[store.nowRightSiderTabIndex]"
+          :key="store.nowRightSiderTabIndex"
           :actionLibrary="actionLibrary"
         />
       </Transition>
@@ -24,18 +24,28 @@
 
 
 <script setup lang="ts">
-import { reactive, ref, Transition, defineProps } from "vue";
+import { reactive, ref, Transition, defineProps, watch } from "vue";
 import type { ConfigActionBase } from "../types/Action";
 import ModuleList from "./right_sider/ModuleList.vue";
 import PropPage from "./right_sider/PropPage.vue";
-const data = reactive(["组件库", "属性"]);
-const tabs = [ModuleList, PropPage];
+import LogPanel from "./right_sider/LogPanel.vue";
+import { useActionStore } from "../stores/action_store";
+const data = reactive(["组件库", "属性", "日志"]);
+const tabs = [ModuleList, PropPage, LogPanel];
 const value = ref(data[0]);
-const tabsIndex = ref(0);
+
+const store = useActionStore();
 
 defineProps<{ 
   actionLibrary: any[],
  }>();
+
+watch(
+  () => store.nowRightSiderTabIndex,
+  () => {
+    value.value = data[store.nowRightSiderTabIndex]
+  }
+)
 
 const switchTab = (v: string) => {
   let res = data.findIndex((e) => {
@@ -43,7 +53,7 @@ const switchTab = (v: string) => {
   });
 
   if (res != -1) {
-    tabsIndex.value = res;
+    store.nowRightSiderTabIndex = res;
   }
 };
 </script>

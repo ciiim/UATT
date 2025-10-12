@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -100,6 +101,8 @@ func FmtGetVar(varFmt string, ctx *ActionContext) any {
 				return ctx.LastExecResult.Error()
 			}
 		}()
+	case '3':
+		return time.Now().Format("01-02 15:04:05")
 	default:
 		v, has := ctx.variableMap[varName]
 		if !has {

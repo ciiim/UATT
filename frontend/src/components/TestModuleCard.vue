@@ -1,5 +1,5 @@
 <template>
-  <div class="action-card" :key="data.ActionUID">
+  <div class="action-card" :key="data.ActionUID" :class="{ done_failed: data.Status === '失败' ,done_success: data.Status === '完成', running: data.Status === '运行中' }">
     <!-- 第一行：图标 + 名称 + tag 列 -->
     <div class="action-header">
       <component :is="getIcon(data.ActionTypeID)" style="color: black; font-size: large;" />
@@ -7,7 +7,7 @@
 
       <div class="action-tags">
         <a-tag
-          v-for="(tag, idx) in data.tags"
+          v-for="(tag, idx) in data.Tags"
           :key="idx"
           color="blue"
           class="action-tag"
@@ -22,12 +22,15 @@
 
     <!-- 第二行：额外信息 + 操作按钮 -->
     <div class="action-footer">
-      <span class="action-label">超时</span>
+      <div v-if="data.ActionTypeID === 1 || data.ActionTypeID === 2">
+        <span class="action-label">超时</span>
       <span class="action-value">
         {{ getTimeout(data) }}ms
       </span>
+    </div>
+      
       <span class="action-label">状态</span>
-      <span class="action-value">{{ data.status ?? '待定' }}</span>
+      <span class="action-value">{{ data.Status ?? '待定' }}</span>
 
       <div style="display: flex; margin-left: auto;">
         <a-button type="primary" size="small" style="margin-right: 10px;" @click="">
@@ -54,7 +57,7 @@ import { useActionStore } from '../stores/action_store';
 const store = useActionStore();
 
 const prop = defineProps<{
-  data: any;
+  data: ConfigActionBase;
 }>();
 
 const getIcon = (actionId : number) => {
@@ -101,8 +104,29 @@ const iconList = [
 </script>
 
 <style scoped>
+
+
+@keyframes runningPulse {
+  0% { box-shadow: 0 0 8px rgba(24, 144, 255, 0.8); }
+  50% { box-shadow: 0 0 16px rgba(24, 144, 255, 0.4); }
+  100% { box-shadow: 0 0 8px rgba(24, 144, 255, 0.8); }
+}
+
+.action-card.done_success {
+  border: 3px solid #09a819;
+}
+
+.action-card.done_failed {
+  border: 3px solid #7d0315;
+}
+
+.action-card.running {
+  border: 3px solid #1890ff;
+  animation: runningPulse 1s infinite;
+}
+
 .action-card {
-  border: 1px solid #d9d9d9;
+  border: 3px solid #d9d9d9;
   border-radius: 8px;
   padding: 8px;
   background-color: #fff;

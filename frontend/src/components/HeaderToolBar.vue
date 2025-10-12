@@ -10,12 +10,15 @@
         placeholder="选择串口"
         style="width: 160px"
         @change="onSelectSerial"
+        @onOpenChange="GetSerialList"
       >
         <a-select-option v-for="port in serialList" :key="port" :value="port">
           {{ port }}
         </a-select-option>
       </a-select>
-      <a-button class="btn" type="primary" @click="startAction">运行</a-button>
+      <a-button class="btn" type="primary" v-if="nowRunningStatus == 0" @click="startAction">运行</a-button>
+      <a-button class="btn" type="primary" v-if="nowRunningStatus == 2" >等待结束</a-button>
+      <a-button class="btn" type="primary" v-if="nowRunningStatus == 1"  @click="stopAction">停止</a-button>
       <a-button class="btn" type="primary" @click="onSave">保存</a-button>
       <a-button class="btn" type="primary" @click="openSetting">设置</a-button>
     </div>
@@ -87,12 +90,14 @@ import {
   GetAllSerial,
   SelectSerialCom,
   Start,
+  Stop,
   GetAppSettings,
   SyncAppSettings,
   SaveApp,
   SyncActions,
 } from "../../wailsjs/go/bsd_testtool/Manager";
 import { bsd_testtool } from "../../wailsjs/go/models";
+import { EventsOn } from "../../wailsjs/runtime/runtime"
 
 const actionStore = useActionStore();
 
@@ -107,6 +112,19 @@ const configSettings = ref<bsd_testtool.AppConfigSettings>(
 
 // 页面加载时获取串口列表
 onMounted(async () => {
+  
+  EventsOn('stopped', (data) => {
+    nowRunningStatus.value = 0
+  })
+  
+  await GetSerialList()
+
+
+});
+
+const nowRunningStatus = ref<number>(0);
+
+const GetSerialList = async ()=> {
   try {
     serialList.value = await GetAllSerial();
     if (serialList.value.length > 0) {
@@ -118,7 +136,7 @@ onMounted(async () => {
     console.error(err);
     message.error("获取串口列表失败");
   }
-});
+} 
 
 // 选择串口
 const onSelectSerial = async (port: string) => {
@@ -131,7 +149,18 @@ const onSelectSerial = async (port: string) => {
   }
 };
 
-const startAction = async () => {};
+const startAction = async () => {
+  await onSave()
+  actionStore.nowRightSiderTabIndex = 2;
+  await Start()
+  nowRunningStatus.value = 1
+};
+
+const stopAction = async () => {
+  nowRunningStatus.value = 2
+  await Stop()
+  nowRunningStatus.value = 0
+}
 
 const openSetting = () => {
   GetAppSettings()

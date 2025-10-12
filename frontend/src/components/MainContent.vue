@@ -2,7 +2,7 @@
   <div style="position: relative; width: 100%; height: 100%">
     <draggable
       style="width: 100%; height: 100%"
-      v-model="contentActions"
+      v-model="store.actions"
       :group="{ name: 'mods', pull: true, put: true }"
       :animation="200"
       :ghostClass="'ghost'"
@@ -19,7 +19,7 @@
       <template #item="{ element }">
         <div
           class="action-item"
-          :class="{ active: nowSelectedAction?.ActionUID === element.ActionUID }"
+          :class="{ active: store.selectedAction?.ActionUID === element.ActionUID }"
           :style="{ marginLeft: (element.indent ?? 0) * 20 + 'px' }"
           @click="selectAction(element)"
         >
@@ -31,19 +31,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 
 import { GetActionList } from "../../wailsjs/go/bsd_testtool/Manager";
 
+import { EventsOn } from "../../wailsjs/runtime/runtime"
+
 import { parseActionTags, computeIndents } from "../utils/action_utils";
 
-import type { ConfigActionBase } from "../types/Action";
+import type { ConfigActionBase, ActionReport } from "../types/Action";
 
 import draggable from "vuedraggable";
 
 import { defineProps } from "vue";
 import { useActionStore } from "../stores/action_store";
 import { message } from "ant-design-vue";
+import { bsd_testtool } from "../../wailsjs/go/models";
 
 const prop = defineProps<{
   actionLibrary: any[];
@@ -52,9 +55,6 @@ const prop = defineProps<{
 
 const store = useActionStore()
 
-const contentActions = ref<ConfigActionBase[]>([]);
-
-const nowSelectedAction = ref<ConfigActionBase | undefined>();
 
 watch(
   () => prop.needGetActionList,
@@ -63,10 +63,10 @@ watch(
       .then((res) => {
         const withTags = res.map((action) => ({
           ...action,
-          tags: parseActionTags(action), // 之前的标签解析
+          Tags: parseActionTags(action), // 之前的标签解析
+          Status: "无"
         }));
-        contentActions.value = computeIndents(withTags); // 增加缩进属性
-        store.actions = contentActions.value
+        store.actions = computeIndents(withTags); // 增加缩进属性
       })
       .catch((err) => {
         console.log("错误 " + err);
@@ -75,18 +75,41 @@ watch(
 );
 
 const onDragChange = () => {
-  contentActions.value = computeIndents(contentActions.value)
-  store.actions = contentActions.value
+  store.actions = computeIndents(store.actions)
 }
 
 const drag = ref(false);
 
+onMounted(() => {
+  console.log("mounted");
+
+  EventsOn("begin-action", (data) => {
+    store.actions.forEach(a => {
+      a.Status = "未开始"
+    })
+  })
+  
+  EventsOn("now-action", (data : ActionReport) => {
+    
+    const actionIdx = store.actions.findIndex(a => a.ActionUID == data.ActionUID)
+    
+    store.actions[actionIdx].Status = "运行中"
+  })
+  EventsOn("done-action", (data : ActionReport) => {
+    const actionIdx = store.actions.findIndex(a => a.ActionUID == data.ActionUID)
+    if (data.Result != "success") {
+      store.actions[actionIdx].Status = "失败"
+      message.error(data.Result)
+    } else {
+      store.actions[actionIdx].Status = "完成"
+    }
+  })
+})
 
 
 const selectAction = (action: any) => {
-  nowSelectedAction.value = action;
   store.selectedAction = action;
-  console.log(store.selectedAction?.TypeFeatureField);
+  store.nowRightSiderTabIndex = 1;
   
   // message.info('选择:'+ nowSelectedAction.value?.ActionUID)
 };

@@ -33,6 +33,7 @@ var ErrAppExist error = errors.New("app exist")
 var GlobalManager Manager
 
 func (m *Manager) Startup(ctx context.Context) {
+	println("start manager")
 	m.ctx = ctx
 }
 
@@ -94,7 +95,7 @@ func (m Manager) StepStart() error {
 		return err
 	}
 
-	engine := NewActionEngine(m.nowApp, m.ctx)
+	engine := NewActionEngine(m.nowApp, m.ctx, m.stopCB)
 
 	if err := engine.PreCompile(); err != nil {
 		return err
@@ -128,7 +129,7 @@ func (m *Manager) Start() error {
 		return err
 	}
 
-	engine := NewActionEngine(m.nowApp, m.ctx)
+	engine := NewActionEngine(m.nowApp, m.ctx, m.stopCB)
 
 	if err := engine.PreCompile(); err != nil {
 		return err
@@ -139,6 +140,10 @@ func (m *Manager) Start() error {
 	engine.StartAsync()
 
 	return nil
+}
+
+func (m *Manager) stopCB() {
+	m.Stop()
 }
 
 func (m *Manager) Stop() error {
