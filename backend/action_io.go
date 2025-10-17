@@ -248,6 +248,7 @@ func (fixed *IOFixedModule) check(input []byte) (equal bool, err error) {
 			continue
 		}
 		if int(input[i]) != c {
+			fmt.Printf("check failed input: %d, c: %d\n", input[i], c)
 			return false, nil
 		}
 	}
@@ -367,7 +368,7 @@ func (r *ReceiveAction) doAction(ctx *ActionContext) error {
 
 	modCtx := r.GetContext()
 
-	modCtx.subBytes = make([][]byte, 0)
+	modCtx.subBytes = make([][]byte, len(r.Modules))
 
 	// 一个个模块读取，遇到Custom里指定UID的，就向前查找要读取的字节数
 	for i, m := range r.Modules {
@@ -380,13 +381,13 @@ func (r *ReceiveAction) doAction(ctx *ActionContext) error {
 		recvBuffer := make([]byte, recvLength)
 
 		totalLength := 0
-		rLength := 0
-		for totalLength != rLength {
+		for totalLength != recvLength {
 			rLength, err := ctx.serial.Read(recvBuffer[totalLength:])
 			if err != nil {
 				ctx.SetController(&EnginControllor{nextUID: StopUID})
 				return err
 			}
+			fmt.Printf("read %d bytes, %v\n", rLength, recvBuffer)
 			totalLength += rLength
 		}
 

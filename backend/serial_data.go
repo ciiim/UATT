@@ -83,6 +83,8 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 		return nil, fmt.Errorf("wrong length %d, expect %d bytes", len(fullBytes), totalLength)
 	}
 
+	fmt.Printf("send bytes %v\n", fullBytes)
+
 	return fullBytes, nil
 }
 

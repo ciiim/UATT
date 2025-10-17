@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"go.bug.st/serial"
 )
 
 const (
@@ -91,6 +93,8 @@ func (m Manager) StepStart() error {
 		return ErrNotFoundApp
 	}
 
+	GlobalSerial.SetMode(m.nowApp.serialConfig.BaudRate, m.nowApp.serialConfig.DataBits, serial.NoParity, serial.StopBits(m.nowApp.serialConfig.StopBits))
+
 	if err := GlobalSerial.OpenSerial(); err != nil {
 		return err
 	}
@@ -124,6 +128,8 @@ func (m *Manager) Start() error {
 	if m.nowApp == nil {
 		return ErrNotFoundApp
 	}
+
+	GlobalSerial.SetMode(m.nowApp.serialConfig.BaudRate, 8, serial.NoParity, serial.OneStopBit)
 
 	if err := GlobalSerial.OpenSerial(); err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"bsd_testtool/backend/types"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand/v2"
 	"os"
@@ -141,6 +142,9 @@ func (a *App) FullUpdateActions(actions []ConfigActionBase) error {
 		na.actionTypeStr = action.ActionType
 		na.name = action.Name
 
+		if _, ok := action.TypeFeatureField.(IConfig); !ok {
+			return fmt.Errorf("cannot convert TypeFeatureField to IConfig")
+		}
 		na.action = action.TypeFeatureField.(IConfig).ToAction()
 
 		// map

@@ -30,7 +30,6 @@ declare module 'vue' {
     ASwitch: typeof import('ant-design-vue/es')['Switch']
     ATag: typeof import('ant-design-vue/es')['Tag']
     ATextarea: typeof import('ant-design-vue/es')['Textarea']
-    ATooltip: typeof import('ant-design-vue/es')['Tooltip']
     HeaderToolBar: typeof import('./src/components/HeaderToolBar.vue')['default']
     LeftSiderMenu: typeof import('./src/components/LeftSiderMenu.vue')['default']
     LogPanel: typeof import('./src/components/right_sider/LogPanel.vue')['default']

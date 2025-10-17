@@ -2,6 +2,7 @@ package bsd_testtool
 
 import (
 	"errors"
+	"fmt"
 
 	"go.bug.st/serial"
 )
@@ -36,6 +37,7 @@ func (s *Serial) SetMode(baudRate int, dataBits int, parity serial.Parity, stopB
 	s.mode.DataBits = dataBits
 	s.mode.Parity = parity
 	s.mode.StopBits = stopBits
+	fmt.Printf("%v", s.mode)
 }
 
 func (s *Serial) SelectPort(port string) {
@@ -45,6 +47,12 @@ func (s *Serial) SelectPort(port string) {
 func (s *Serial) OpenSerial() error {
 	p, err := serial.Open(s.portName, &s.mode)
 	if err != nil {
+		fmt.Printf("open serial{%s} err:%s", s.portName, err.Error())
+		return err
+	}
+	p.SetMode(&s.mode)
+	if err != nil {
+		fmt.Printf("serial set mode{%s} err:%s", s.portName, err.Error())
 		return err
 	}
 	s.port = p

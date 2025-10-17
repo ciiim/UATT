@@ -1,4 +1,5 @@
 <template>
+  <div>
   <div class="prop-page" v-if="store.selectedAction">
     <h3 style="margin-bottom: 16px; color: black">
       Action 编辑
@@ -105,6 +106,16 @@
                 @blur="
                   (e : any)=> mod.CustomContent = fixedFromString(e.target.value)
                 "
+              />
+            </a-form-item>
+            <!-- 多选输入模块UID -->
+            <a-form-item label="参考输入长度模块 UID">
+              <a-select
+                v-model:value="mod.ReceiveVarLengthModuleUID"
+                mode="multiple"
+                style="width: 100%"
+                :options="calcInputOptions(mod)"
+                placeholder="请选择输入模块"
               />
             </a-form-item>
           </template>
@@ -322,6 +333,7 @@
       <li><code>{goo:0,3}</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
     </ul>
   </a-modal>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -399,6 +411,7 @@ const createModuleTemplate = (typeId: number, uid: number) => {
         ModuleUID: uid,
         ModuleTypeID: typeId,
         CustomContent: [],
+        ReceiveVarLengthModuleUID: []
       };
     default:
       return {

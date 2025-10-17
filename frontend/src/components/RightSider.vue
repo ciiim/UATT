@@ -54,6 +54,8 @@ const switchTab = (v: string) => {
 
   if (res != -1) {
     store.nowRightSiderTabIndex = res;
+    console.log("index:" + res);
+    
   }
 };
 </script>
