@@ -84,6 +84,12 @@ func (s *StopActionFeatureField) ToAction() IAction {
 
 func unmarshalControlAction(actionTypeID types.ActionTypeID, b []byte) (any, error) {
 	switch actionTypeID {
+	case types.DeclareAT:
+		var d DeclareActionFeatureField
+		if err := json.Unmarshal(b, &d); err != nil {
+			return nil, err
+		}
+		return &d, nil
 	case types.IfAT:
 		var f IfActionFeatureField
 		if err := json.Unmarshal(b, &f); err != nil {

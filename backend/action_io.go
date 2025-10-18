@@ -262,7 +262,7 @@ func (fixed *IOFixedModule) check(input []byte) (equal bool, err error) {
 func (c *IOCustomModule) check(input []byte) (equal bool, err error) {
 
 	// 可变长度的接收跳过检查
-	if c.ReceiveVarLengthModuleUID != -1 {
+	if c.ReceiveVarLengthModuleUID != -1 && c.ReceiveVarLengthModuleUID != 0 {
 		return true, nil
 	}
 
@@ -375,9 +375,12 @@ func (r *ReceiveAction) doAction(ctx *ActionContext) error {
 		recvLength, _ := m.getBasicInfo()
 		if c, ok := m.(*IOCustomModule); ok {
 			varLengthUID := c.ReceiveVarLengthModuleUID
-			recvLength = int(binary.BigEndian.Uint64(modCtx.subBytes[modCtx.moduleUIDMap[varLengthUID].GetIndex()]))
+			input := modCtx.subBytes[modCtx.moduleUIDMap[varLengthUID].GetIndex()]
+			temp := make([]byte, 8)
+			copy(temp[8-len(input):], input)
+			recvLength = int(binary.BigEndian.Uint64(temp))
 		}
-
+		fmt.Printf("recvLength:%d\n", recvLength)
 		recvBuffer := make([]byte, recvLength)
 
 		totalLength := 0
@@ -393,6 +396,10 @@ func (r *ReceiveAction) doAction(ctx *ActionContext) error {
 
 		modCtx.subBytes[i] = recvBuffer
 	}
+
+	fullBytes := bytes.Join(modCtx.subBytes, nil)
+
+	ctx.LastSerialBuffer = fullBytes
 
 	uid, err := CheckReceiveBytesArray(r, ctx, modCtx)
 	if err != nil {

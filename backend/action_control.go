@@ -59,13 +59,18 @@ func (i *IfAction) doAction(ctx *ActionContext) error {
 		return err
 	}
 
+	fmt.Printf("if result:%v", res)
+
 	resBool := res.(bool)
 
 	if resBool {
 		con.nextUID = cf.TrueUID
+
 	} else {
 		con.nextUID = cf.FalseUID
 	}
+
+	fmt.Printf("next UID:%v", con.nextUID)
 
 	ctx.SetController(con)
 
@@ -74,7 +79,11 @@ func (i *IfAction) doAction(ctx *ActionContext) error {
 
 func (e *ElseAction) doAction(ctx *ActionContext) error {
 
-	ctx.DefaultNextAction()
+	cf := ctx.controlFlowMap[ctx.nowAction.actionUID]
+
+	con := &EnginControllor{nextUID: cf.EndUID}
+
+	ctx.SetController(con)
 
 	return nil
 }

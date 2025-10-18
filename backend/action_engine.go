@@ -245,7 +245,7 @@ func (a *ActionEngine) PreCompile() error {
 			a.ctx.controlFlowMap[nowAction.actionUID] = &controlFlow{
 				controlType:   t,
 				expressionAst: parser.GetAST(),
-				TrueUID:       nowAction.actionUID + 1,
+				TrueUID:       nowAction.next.actionUID,
 			}
 
 			// 压栈
@@ -259,7 +259,10 @@ func (a *ActionEngine) PreCompile() error {
 			if !has {
 				return errors.New("else without matching if")
 			}
-			cf.FalseUID = nowAction.actionUID + 1
+			cf.FalseUID = nowAction.next.actionUID
+
+			// 也根据else的uid存一份
+			a.ctx.controlFlowMap[nowAction.actionUID] = cf
 
 			// 临时存IF
 			ifcf := controlFlowStack[len(controlFlowStack)-1]
@@ -288,7 +291,7 @@ func (a *ActionEngine) PreCompile() error {
 				if !has {
 					continue
 				}
-				cf.EndUID = nowAction.actionUID + 1
+				cf.EndUID = nowAction.actionUID
 			} else if top.ct == types.ForLabelAT {
 				// 如果是for类型，还得往map里插入一个可以通过endblock的index查找的元素
 				// 加进map里面
@@ -298,7 +301,7 @@ func (a *ActionEngine) PreCompile() error {
 					// 这里不+1，因为要回到for上做检查
 					LoopStartUID: top.i,
 
-					EndUID: nowAction.actionUID + 1,
+					EndUID: nowAction.actionUID,
 				}
 			}
 
@@ -426,6 +429,8 @@ func (a *ActionEngine) innerStart() error {
 			a.ctx.nowActionStatus = ErrorStopped
 			return err
 		}
+
+		fmt.Printf("now id:%v", a.ctx.nowAction.actionUID)
 	}
 
 	if a.ctx.LastExecResult != nil {
@@ -463,7 +468,11 @@ func (a *ActionEngine) control() error {
 	case DummyUID:
 		a.ctx.nowAction = a.ctx.nowAction.next
 	default:
-		a.ctx.nowAction = a.ctx.actionUIDMap[con.nextUID]
+		var ok bool
+		a.ctx.nowAction, ok = a.ctx.actionUIDMap[con.nextUID]
+		if !ok {
+			return fmt.Errorf("cannot find uid %d", con.nextUID)
+		}
 	}
 	return nil
 }

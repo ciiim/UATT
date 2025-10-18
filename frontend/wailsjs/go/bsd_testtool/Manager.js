@@ -22,6 +22,10 @@ export function GetAllAppName() {
   return window['go']['bsd_testtool']['Manager']['GetAllAppName']();
 }
 
+export function GetAllCalcFn() {
+  return window['go']['bsd_testtool']['Manager']['GetAllCalcFn']();
+}
+
 export function GetAllSerial() {
   return window['go']['bsd_testtool']['Manager']['GetAllSerial']();
 }

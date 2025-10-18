@@ -10,7 +10,7 @@
         placeholder="选择串口"
         style="width: 160px"
         @change="onSelectSerial"
-        @onOpenChange="GetSerialList"
+        @dropdownVisibleChange="GetSerialList"
       >
         <a-select-option v-for="port in serialList" :key="port" :value="port">
           {{ port }}
@@ -118,7 +118,11 @@ onMounted(async () => {
   })
   
   await GetSerialList()
-
+  if (serialList.value.length > 0) {
+      selectedSerial.value = serialList.value[0];
+      // 默认选中第一个串口
+      await SelectSerialCom(selectedSerial.value);
+    }
 
 });
 
@@ -126,12 +130,8 @@ const nowRunningStatus = ref<number>(0);
 
 const GetSerialList = async ()=> {
   try {
+    
     serialList.value = await GetAllSerial();
-    if (serialList.value.length > 0) {
-      selectedSerial.value = serialList.value[0];
-      // 默认选中第一个串口
-      await SelectSerialCom(selectedSerial.value);
-    }
   } catch (err) {
     console.error(err);
     message.error("获取串口列表失败");
@@ -141,6 +141,8 @@ const GetSerialList = async ()=> {
 // 选择串口
 const onSelectSerial = async (port: string) => {
   try {
+    console.log('select');
+    
     await SelectSerialCom(port);
     //message.success(`已选择串口: ${port}`);
   } catch (err) {
@@ -150,10 +152,15 @@ const onSelectSerial = async (port: string) => {
 };
 
 const startAction = async () => {
-  await onSave()
-  actionStore.nowRightSiderTabIndex = 2;
-  await Start()
-  nowRunningStatus.value = 1
+  try {
+    await onSave()
+    actionStore.nowRightSiderTabIndex = 2;
+    await Start()
+    nowRunningStatus.value = 1
+  } catch(err) {
+    message.error('运行失败:' + err)
+  }
+
 };
 
 const stopAction = async () => {
@@ -187,8 +194,12 @@ const handleAddApp = async () => {
 
 const onSave = async () => {
   try {
+    console.log("actions:", actionStore.actions);
     // 调用 wails 后端保存
     await SyncActions(actionStore.actions);
+    console.log("step 1");
+    
+    
     await SaveApp();
 
     message.success("保存成功");

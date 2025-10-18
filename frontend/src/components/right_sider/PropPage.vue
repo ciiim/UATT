@@ -26,11 +26,11 @@
           v-for="(mod, index) in store.selectedAction.TypeFeatureField.Modules"
           :key="mod.ModuleUID"
         >
-          <a-divider>子模块 {{ index + 1 }}</a-divider>
+          <a-divider>子模块 {{ moduleList.get(mod.ModuleTypeID) }}</a-divider>
 
-          <a-form-item label="ModuleTypeID">
+          <a-form-item label="ModuleUID">
             <a-input-number
-              v-model:value="mod.ModuleTypeID"
+              v-model:value="mod.ModuleUID"
               disabled
               style="width: 100%"
             />
@@ -62,13 +62,28 @@
           <!-- Calc -->
           <template v-else-if="mod.ModuleTypeID === 12">
             <a-form-item label="模式">
-              <a-input v-model:value="mod.Mode" />
+              <a-select
+                v-model:value="mod.Mode"
+                style="width: 100%"
+                :options="CalcMode"
+                placeholder="请选择计算模式"
+              />
             </a-form-item>
             <a-form-item label="计算函数">
-              <a-input v-model:value="mod.CalcFunc" />
+              <a-select
+                v-model:value="mod.CalcFunc"
+                style="width: 100%"
+                :options="calcFn"
+                placeholder="请选择计算函数"
+              />
             </a-form-item>
             <a-form-item label="计算时机">
-              <a-input v-model:value="mod.CalcTiming" />
+              <a-select
+                v-model:value="mod.CalcTiming"
+                style="width: 100%"
+                :options="CalcTiming"
+                placeholder="请选择计算时机"
+              />
             </a-form-item>
             <a-form-item label="占位字节">
               <a-textarea
@@ -109,13 +124,13 @@
               />
             </a-form-item>
             <!-- 多选输入模块UID -->
-            <a-form-item label="参考输入长度模块 UID">
+            <a-form-item label="参考输入长度模块 UID" :rules="[{required: false}]">
               <a-select
                 v-model:value="mod.ReceiveVarLengthModuleUID"
-                mode="multiple"
                 style="width: 100%"
                 :options="calcInputOptions(mod)"
                 placeholder="请选择输入模块"
+                allowClear
               />
             </a-form-item>
           </template>
@@ -337,13 +352,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, ref } from "vue";
+import { computed, watch, ref, onMounted } from "vue";
 import type { ConfigActionBase } from "../../types/Action";
 import { useActionStore } from "../../stores/action_store";
 import { parseActionTags } from "../../utils/action_utils";
+import { GetAllCalcFn } from "../../../wailsjs/go/bsd_testtool/Manager"
 import { Divider } from "ant-design-vue";
 
 const store = useActionStore();
+
+onMounted(() => {
+  getCalcFn();
+})
 
 const newModuleType = ref<number | null>(null);
 
@@ -411,7 +431,7 @@ const createModuleTemplate = (typeId: number, uid: number) => {
         ModuleUID: uid,
         ModuleTypeID: typeId,
         CustomContent: [],
-        ReceiveVarLengthModuleUID: []
+        ReceiveVarLengthModuleUID: typeId
       };
     default:
       return {
@@ -459,14 +479,31 @@ const moduleList = new Map([
   [13, "Custom"],
 ]);
 
+const CalcMode = [{label: '计算', value: 'Calc'}, {label:'检查', value: 'Check'}]
+
+const CalcTiming = [{label: '即时', value: 'Now'}, {label:'组装后', value: 'Post'}]
+
+const calcFn = ref<{label: string, value: string}[]>()
+
+const getCalcFn = () => {
+  GetAllCalcFn().then((res) => {
+      const fnList =  res.map((v : string) => ({
+        label: v,
+        value: v,
+      }))
+      calcFn.value = fnList
+  })
+
+}
+
 const calcInputOptions = (currentMod: any) => {
   const modules = store.selectedAction?.TypeFeatureField?.Modules ?? [];
   return modules
     .filter((m: any) => m.ModuleUID !== currentMod.ModuleUID) // 排除自己
     .map((m: any) => ({
-      label: `模块UID ${m.ModuleUID} (${
+      label: `${
         m.ModuleTypeIDName ?? "类型" + moduleList.get(m.ModuleTypeID)
-      })`,
+      } (${m.ModuleUID})`,
       value: m.ModuleUID,
     }));
 };

@@ -138,6 +138,7 @@ func (m *Manager) Start() error {
 	engine := NewActionEngine(m.nowApp, m.ctx, m.stopCB)
 
 	if err := engine.PreCompile(); err != nil {
+		GlobalSerial.CloseSerial()
 		return err
 	}
 
@@ -384,4 +385,12 @@ func (m *Manager) GetAllSerial() ([]string, error) {
 
 func (m *Manager) SelectSerialCom(com string) {
 	GlobalSerial.SelectPort(com)
+}
+
+func (m *Manager) GetAllCalcFn() []string {
+	res := make([]string, 0)
+	for s := range CalcFnMap {
+		res = append(res, s)
+	}
+	return res
 }

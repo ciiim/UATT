@@ -12,6 +12,8 @@ export function GetActionList():Promise<Array<bsd_testtool.ConfigActionBaseJson>
 
 export function GetAllAppName():Promise<Array<string>>;
 
+export function GetAllCalcFn():Promise<Array<string>>;
+
 export function GetAllSerial():Promise<Array<string>>;
 
 export function GetAppSettings():Promise<bsd_testtool.AppConfigSettings>;

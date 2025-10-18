@@ -21,9 +21,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { Button, List, message } from "ant-design-vue";
-import { EventsOn } from "../../../wailsjs/runtime/runtime"; // 假设你用 Wails 的事件机制
+import { EventsOff, EventsOn } from "../../../wailsjs/runtime/runtime"; // 假设你用 Wails 的事件机制
 import { useActionStore } from "../../stores/action_store";
 
 const store = useActionStore();
@@ -32,6 +32,10 @@ onMounted(() => {
   EventsOn("runtime-log", (msg: string) => {
     store.logs.push(msg);
   });
+});
+
+onUnmounted(() => {
+  EventsOff("runtime-log");
 });
 
 const clearLogs = () => {
