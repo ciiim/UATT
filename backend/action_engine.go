@@ -28,6 +28,8 @@ type VarType = string
 const (
 	VarNumber      VarType = "number"
 	VarNumberArray VarType = "array"
+	VarString      VarType = "string"
+	VarJSON        VarType = "JSON"
 )
 
 type variable struct {
@@ -214,6 +216,10 @@ func (a *ActionEngine) PreCompile() error {
 				v.v = tmp.VarNumberValue
 			case VarNumberArray:
 				v.v = tmp.VarByteArrayValue
+			case VarString:
+				v.v = tmp.VarStringValue
+			case VarJSON:
+				v.v = tmp.VarStringValue
 			}
 			a.ctx.variableMap[tmp.VarName] = v
 		}
@@ -313,7 +319,7 @@ func (a *ActionEngine) PreCompile() error {
 	}
 
 	if len(controlFlowStack) != 0 {
-		return fmt.Errorf("if or for statment not closed, at index:%d", controlFlowStack[0].i)
+		return fmt.Errorf("if or for statment not closed, at UID:%d", controlFlowStack[0].i)
 	}
 
 	return nil
@@ -435,6 +441,16 @@ func (a *ActionEngine) innerStart() error {
 
 	if a.ctx.LastExecResult != nil {
 		a.ctx.nowActionStatus = ErrorStopped
+		printFmt := a.ctx.LastExecResult.Error()
+
+		printStr := FmtSprintf(printFmt, a.ctx)
+
+		if a.ctx.log != nil {
+			for _, l := range a.ctx.log {
+				l.Write([]byte(printStr))
+			}
+		}
+
 	}
 	defer func() {
 		select {

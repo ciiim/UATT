@@ -11,7 +11,7 @@ type DeclareActionFeatureField struct {
 	VarType           string `json:"VarType"`
 	VarNumberValue    int    `json:"VarNumberValue,omitempty"`
 	VarStringValue    string `json:"VarStringValue,omitempty"`
-	VarByteArrayValue []byte `json:"VarByteArrayValue,omitempty"`
+	VarByteArrayValue []int  `json:"VarByteArrayValue,omitempty"`
 }
 
 func (d *DeclareActionFeatureField) ToAction() IAction {

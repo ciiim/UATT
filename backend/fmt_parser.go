@@ -78,7 +78,6 @@ func FmtGetVar(varFmt string, ctx *ActionContext) any {
 			return nil
 		}
 	}
-
 	switch varName[0] {
 	case '0':
 		return ctx.LastActionName
@@ -109,11 +108,29 @@ func FmtGetVar(varFmt string, ctx *ActionContext) any {
 			return nil
 		}
 
-		if v.varType != VarNumberArray {
+		var vArr []int = nil
+
+		switch v.varType {
+		case VarNumber:
+			vArr = make([]int, 1)
+			vArr[0] = v.v.(int)
+		case VarNumberArray:
+			vArr = v.v.([]int)
+		case VarString:
+			runes := []rune(v.v.(string))
+			vArr = make([]int, len(runes))
+			for i, r := range runes {
+				vArr[i] = int(r)
+			}
+		case VarJSON:
+			runes := []rune(v.v.(string))
+			vArr = make([]int, len(runes))
+			for i, r := range runes {
+				vArr[i] = int(r)
+			}
+		default:
 			return nil
 		}
-
-		vArr := v.v.([]int)
 
 		if arrIndexEnd > len(vArr)-1 {
 			return nil
@@ -412,6 +429,9 @@ func NewParser(eval string) *parser {
 }
 
 func (p *parser) GetAST() *AstNode {
+	if len(p.t) == 0 {
+		return nil
+	}
 	return p.parseOr()
 }
 

@@ -202,7 +202,7 @@ const onSave = async () => {
     
     await SaveApp();
 
-    message.success("保存成功");
+    message.success("保存成功", 1);
   } catch (err) {
     console.error(err);
     message.error("保存失败");

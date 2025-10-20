@@ -1,5 +1,5 @@
 <template>
-  <div style="position: relative; width: 100%; height: 100%">
+  <div v-if="store.nowApp != ''" style="position: relative; width: 100%; height: 100%">
     <draggable
       style="width: 100%; height: 100%"
       v-model="store.actions"
@@ -27,6 +27,9 @@
         </div>
       </template>
     </draggable>
+  </div>
+  <div v-else>
+    <h2 style="color: black;">请选择应用</h2>
   </div>
 </template>
 

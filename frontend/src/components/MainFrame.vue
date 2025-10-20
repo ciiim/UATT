@@ -28,7 +28,7 @@
 			</a-layout-content>
 		</a-layout>
 
-		<a-layout-sider :width="270" :style="siderStyle" breakpoint="lg" collapsed-width="0" :trigger="null" v-model:collapsed="rightCollapsed" collapsible
+		<a-layout-sider :width="rightSiderWidth" :style="siderStyle" breakpoint="lg" collapsed-width="0" :trigger="null" v-model:collapsed="rightCollapsed" collapsible
 			reverseArrow>
 			<RightSider 
 			:action-library="actionLibrary"
@@ -50,14 +50,28 @@ import {
 import HeaderToolBar from './HeaderToolBar.vue';
 import RightSider from './RightSider.vue';
 import LeftSiderMenu from './LeftSiderMenu.vue';
-import { ConfigActionBase } from '../types/Action';
+import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import { useActionStore } from '../stores/action_store';
 
 const leftCollapsed = ref<boolean>(false);
 const rightCollapsed = ref<boolean>(false);
 
+const rightSiderWidth = ref(300)
+
 const store = useActionStore();
 
+const updateRightSiderWidth = () => {
+  const winWidth = window.innerWidth
+  if (winWidth >= 1600) {
+    rightSiderWidth.value = 400
+  } else if (winWidth >= 1200) {
+    rightSiderWidth.value = 320
+  } else if (winWidth >= 800) {
+    rightSiderWidth.value = 270
+  } else {
+    rightSiderWidth.value = 200
+  }
+}
 
 const needGetActionList = ref<boolean>(false);
 const notifyGetActionList = () => {
@@ -76,7 +90,7 @@ const handleKeyDown = async (e: KeyboardEvent) => {
     try {
       await SyncActions(store.actions)
       await SaveApp()
-      message.success('保存成功')
+      message.success('保存成功', 1)
     } catch (err) {
 		if (err != 'could not found app') {
 			message.error('保存失败,' + err)
@@ -86,11 +100,18 @@ const handleKeyDown = async (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
+	updateRightSiderWidth()
+  	window.addEventListener('resize', updateRightSiderWidth)
+  	window.addEventListener('keydown', handleKeyDown)
+	EventsOn("runtime-log", (msg: string) => {
+    	store.logs.push(msg);
+  	});
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
+	window.removeEventListener('resize', updateRightSiderWidth)
+  	window.removeEventListener('keydown', handleKeyDown)
+	EventsOff("runtime-log");
 })
 
 const headerStyle: CSSProperties = {

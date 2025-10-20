@@ -22,9 +22,11 @@
         </a-form-item>
 
         <!-- IO 子模块数组 -->
-        <template
+        <a-collapse v-model:activeKey="ioSubModuleActiveKey">
+        <a-collapse-panel
           v-for="(mod, index) in store.selectedAction.TypeFeatureField.Modules"
           :key="mod.ModuleUID"
+          :header="moduleList.get(mod.ModuleTypeID)"
         >
           <a-divider>子模块 {{ moduleList.get(mod.ModuleTypeID) }}</a-divider>
 
@@ -40,12 +42,9 @@
           <template v-if="mod.ModuleTypeID === 10">
             <a-form-item label="使用变量">
               <a-input v-model:value="mod.UseVar" />
-            </a-form-item>
-            <a-form-item label="填充长度">
-              <a-input-number
-                v-model:value="mod.FillLength"
-                style="width: 100%"
-              />
+              <a-button type="link" size="small" @click="showVarHelp">
+              查看说明
+            </a-button>
             </a-form-item>
           </template>
 
@@ -77,7 +76,7 @@
                 placeholder="请选择计算函数"
               />
             </a-form-item>
-            <a-form-item label="计算时机">
+            <a-form-item label="计算时机" tooltip="如校验和计算需要完整的数据，则需要选择组装后；长度计算则不需要(带有Fill模块时除外)，数据长度开始时已经计算完毕">
               <a-select
                 v-model:value="mod.CalcTiming"
                 style="width: 100%"
@@ -109,13 +108,7 @@
 
           <!-- Custom -->
           <template v-else-if="mod.ModuleTypeID === 13">
-            <a-form-item label="自定义长度">
-              <a-input-number
-                v-model:value="mod.CustomLength"
-                style="width: 100%"
-              />
-            </a-form-item>
-            <a-form-item label="自定义内容 (字节数组)">
+            <a-form-item label="自定义内容 (字节数组)" tooltip="填写 -1 跳过内容检查">
               <a-textarea
                 :value="fixedToString(mod.CustomContent)"
                 @blur="
@@ -124,7 +117,7 @@
               />
             </a-form-item>
             <!-- 多选输入模块UID -->
-            <a-form-item label="参考输入长度模块 UID" :rules="[{required: false}]">
+            <a-form-item label="参考输入长度模块 UID" :rules="[{required: false}]" tooltip="指定模块接收到的数据作为custom模块的读取长度" v-if="store.selectedAction.ActionTypeID == 2">
               <a-select
                 v-model:value="mod.ReceiveVarLengthModuleUID"
                 style="width: 100%"
@@ -136,7 +129,8 @@
           </template>
           <a-button danger @click="removeModule(index)">删除模块</a-button>
           <Divider></Divider>
-        </template>
+          </a-collapse-panel>
+      </a-collapse>
         <div style="padding-top: 20px">
           <a-popconfirm
             title="请选择要新增的模块类型"
@@ -164,47 +158,60 @@
       <a-form layout="vertical">
         <!-- Declare -->
         <template v-if="store.selectedAction.ActionTypeID === 23">
-          <a-form-item label="变量名">
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.VarName"
-            />
-          </a-form-item>
-          <a-form-item label="变量类型">
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.VarType"
-            />
-          </a-form-item>
-          <a-form-item label="数值(Number)">
-            <a-input-number
-              v-model:value="
-                store.selectedAction.TypeFeatureField.VarNumberValue
-              "
-              style="width: 100%"
-            />
-          </a-form-item>
-          <a-form-item label="数值(String)">
-            <a-input
-              v-model:value="
-                store.selectedAction.TypeFeatureField.VarStringValue
-              "
-            />
-          </a-form-item>
-          <a-form-item label="字节数组值">
-            <a-textarea
-              :value="
-                fixedToString(
-                  store.selectedAction.TypeFeatureField.VarByteArrayValue
-                )
-              "
-              @blur="
-                (e : any) => {
-                    if(store.selectedAction != undefined)
-                        store.selectedAction.TypeFeatureField.VarByteArrayValue = fixedFromString(e.target.value)
-                }
-              "
-            />
-          </a-form-item>
-        </template>
+      <!-- 变量名 -->
+      <a-form-item label="变量名">
+        <a-input v-model:value="store.selectedAction.TypeFeatureField.VarName" />
+      </a-form-item>
+
+      <!-- 变量类型选择 -->
+      <a-form-item label="变量类型">
+        <a-select
+          v-model:value="store.selectedAction.TypeFeatureField.VarType"
+          :options="varTypeOptions"
+          placeholder="请选择变量类型"
+          style="width: 100%"
+        />
+      </a-form-item>
+
+      <!-- 根据变量类型显示不同的输入框 -->
+      <a-form-item label="变量值">
+        <!-- Number 类型 -->
+        <a-input-number
+          v-if="store.selectedAction.TypeFeatureField.VarType === 'number'"
+          v-model:value="store.selectedAction.TypeFeatureField.VarNumberValue"
+          style="width: 100%"
+        />
+
+        <!-- String 类型 -->
+        <a-input
+          v-else-if="store.selectedAction.TypeFeatureField.VarType === 'string'"
+          v-model:value="store.selectedAction.TypeFeatureField.VarStringValue"
+        />
+
+        <!-- ByteArray 类型 -->
+          <a-textarea
+          v-else-if="store.selectedAction?.TypeFeatureField?.VarType === 'array'"
+          :value="fixedToString(store.selectedAction?.TypeFeatureField?.VarByteArrayValue)"
+          @blur="(e: any) => {
+            if (store.selectedAction && store.selectedAction.TypeFeatureField) {
+              store.selectedAction.TypeFeatureField.VarByteArrayValue = fixedFromString(e.target.value)
+            }
+          }"
+        />
+
+        <!-- JSON 类型（vue-json-editor） -->
+        <json-editor-vue
+          v-else-if="store.selectedAction.TypeFeatureField.VarType === 'JSON'"
+          v-model="store.selectedAction.TypeFeatureField.VarStringValue"
+          mode="text"
+          lang="zh"
+          height="400px"
+        />
+
+        <!-- 如果没选类型 -->
+        <span v-else style="color: #999">请选择变量类型</span>
+      </a-form-item>
+    </template>
 
         <!-- IF -->
         <template v-else-if="store.selectedAction.ActionTypeID === 24">
@@ -212,6 +219,9 @@
             <a-input
               v-model:value="store.selectedAction.TypeFeatureField.Condition"
             />
+            <a-button type="link" size="small" @click="showFmtHelp">
+              查看说明
+            </a-button>
           </a-form-item>
         </template>
 
@@ -299,7 +309,7 @@
             <a-input
               v-model:value="store.selectedAction.TypeFeatureField.PrintFmt"
             />
-            <a-button type="link" size="small" @click="showHelp">
+            <a-button type="link" size="small" @click="showFmtHelp">
               查看说明
             </a-button>
           </a-form-item>
@@ -327,12 +337,12 @@
   </div>
 
   <a-modal
-    v-model:open="helpVisible"
-    title="打印格式字符串说明"
+    v-model:open="helpFmtVisible"
+    title="格式化字符串\表达式 说明"
     footer=""
     width="600px"
   >
-    <p>可以使用占位符来动态生成打印内容：</p>
+    <p>可以使用占位符获取指定内容：</p>
     <ul>
       <li><code>{0}</code> 上一Action名称</li>
       <li><code>{1}</code> 上一串口接收数据</li>
@@ -342,10 +352,29 @@
 
     </ul>
 
+    <p>表达式支持以下语法：</p>
+    <ul>
+      <li> && || < <= > >= != </li>
+    </ul>
+
     <p>数组下标语法：</p>
     <ul>
       <li><code>{goo:0}</code> goo数组的第一个字节 等价于goo[0]</li>
       <li><code>{goo:0,3}</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
+    </ul>
+  </a-modal>
+
+  <a-modal
+    v-model:open="helpVarVisible"
+    title="变量 说明"
+    footer=""
+    width="600px"
+  >
+
+    <p>数组下标语法：</p>
+    <ul>
+      <li><code>goo:0</code> goo数组的第一个字节 等价于goo[0]</li>
+      <li><code>goo:0,3</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
     </ul>
   </a-modal>
   </div>
@@ -353,11 +382,11 @@
 
 <script setup lang="ts">
 import { computed, watch, ref, onMounted } from "vue";
-import type { ConfigActionBase } from "../../types/Action";
 import { useActionStore } from "../../stores/action_store";
 import { parseActionTags } from "../../utils/action_utils";
 import { GetAllCalcFn } from "../../../wailsjs/go/bsd_testtool/Manager"
 import { Divider } from "ant-design-vue";
+import JsonEditorVue from 'json-editor-vue'
 
 const store = useActionStore();
 
@@ -367,8 +396,19 @@ onMounted(() => {
 
 const newModuleType = ref<number | null>(null);
 
-const helpVisible = ref(false);
-const showHelp = () => (helpVisible.value = true);
+const helpFmtVisible = ref(false);
+const helpVarVisible = ref(false);
+const showFmtHelp = () => (helpFmtVisible.value = true);
+const showVarHelp = () => (helpVarVisible.value = true);
+
+const ioSubModuleActiveKey = ref([]);
+
+const varTypeOptions = [
+  { label: '数字(Number)', value: 'number' },
+  { label: '文本(String)', value: 'string' },
+  { label: '字节数组(ByteArray)', value: 'array' },
+  { label: 'JSON', value: 'JSON' }
+]
 
 watch(
   () => store.selectedAction?.TypeFeatureField,
@@ -384,6 +424,7 @@ watch(
   },
   { deep: true }
 );
+
 
 const addModule = (typeId: number | null) => {
   if (!store.selectedAction || !typeId) return;

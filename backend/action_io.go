@@ -416,6 +416,7 @@ type CalcFn func(b []byte) []byte
 
 var CalcFnMap map[string]CalcFn = map[string]CalcFn{
 	"Length2BytesLE": Length2BytesLE,
+	"Length1BytesLE": Length1BytesLE,
 	"Xor1Bytes":      Xor1Bytes,
 	"Sum1Bytes":      Sum1Bytes,
 }
@@ -430,6 +431,10 @@ func Length2BytesLE(b []byte) []byte {
 		byte((length >> 8) & 0xFF),
 		byte(length & 0xFF),
 	}
+}
+
+func Length1BytesLE(b []byte) []byte {
+	return []byte{byte(len(b))}
 }
 
 func Xor1Bytes(b []byte) []byte {

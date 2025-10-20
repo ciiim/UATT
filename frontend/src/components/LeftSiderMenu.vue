@@ -130,7 +130,7 @@ const selectApp = async (app: string) => {
   try {
     // message.loading('加载中')
     await LoadApp(app);
-    message.info("加载完毕");
+    message.info("加载完毕", 1);
 
     emit("app-loaded");
   } catch (err) {

@@ -38,6 +38,8 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 
 	}
 
+	fmt.Printf("now :%v, post:%v\n", ctx.calcNowArr, ctx.calcPostArr)
+
 	// fmt.Printf("total length:%d\n", totalLength)
 
 	// 执行now的计算模块
@@ -46,6 +48,7 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 		case *IOFillModule:
 			_, resBytes, err = t.fill(actionCtx)
 			totalLength += len(resBytes)
+			fmt.Printf("fill length:%d\n", len(resBytes))
 		case *IOCalcModule:
 			_, resBytes, err = t.calc(ctx)
 		default:
@@ -56,6 +59,7 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 		}
 
 		ctx.subBytes[sm.GetIndex()] = resBytes
+		fmt.Printf("now add bytes len:%d,uid:%d\n", len(resBytes), sm.GetUID())
 	}
 
 	// 执行post的计算模块
@@ -65,6 +69,7 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 			_, resBytes, err = t.fill(actionCtx)
 			totalLength += len(resBytes)
 		case *IOCalcModule:
+			fmt.Printf("now calc module %v\n", t.CalcFunc)
 			_, resBytes, err = t.calc(ctx)
 		default:
 			return nil, fmt.Errorf("unsupport sub module type, UID: %d", sm.GetUID())
@@ -74,6 +79,8 @@ func BuildSendBytesArray(s *SendAction, actionCtx *ActionContext) ([]byte, error
 		}
 
 		ctx.subBytes[sm.GetIndex()] = resBytes
+		fmt.Printf("post add bytes len:%d, uid:%d\n", len(resBytes), sm.GetUID())
+
 	}
 
 	// 组装成完整数组

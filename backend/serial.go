@@ -50,7 +50,7 @@ func (s *Serial) OpenSerial() error {
 		fmt.Printf("open serial{%s} err:%s", s.portName, err.Error())
 		return err
 	}
-	p.SetMode(&s.mode)
+	err = p.SetMode(&s.mode)
 	if err != nil {
 		fmt.Printf("serial set mode{%s} err:%s", s.portName, err.Error())
 		return err

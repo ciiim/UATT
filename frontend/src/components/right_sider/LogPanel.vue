@@ -28,15 +28,6 @@ import { useActionStore } from "../../stores/action_store";
 
 const store = useActionStore();
 
-onMounted(() => {
-  EventsOn("runtime-log", (msg: string) => {
-    store.logs.push(msg);
-  });
-});
-
-onUnmounted(() => {
-  EventsOff("runtime-log");
-});
 
 const clearLogs = () => {
   store.logs = [];
