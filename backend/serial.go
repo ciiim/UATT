@@ -3,6 +3,7 @@ package bsd_testtool
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -63,6 +64,7 @@ func (s *Serial) CloseSerial() error {
 	if s.port == nil {
 		return ErrSerialNotOpen
 	}
+	fmt.Println("close serial")
 	if err := s.port.Close(); err != nil {
 		return err
 	}
@@ -75,6 +77,13 @@ func (s *Serial) Write(buffer []byte) (int, error) {
 		return 0, ErrSerialNotOpen
 	}
 	return s.port.Write(buffer)
+}
+
+func (s *Serial) SetReadTimeout(timeout time.Duration) error {
+	if s.port == nil {
+		return ErrSerialNotOpen
+	}
+	return s.port.SetReadTimeout(timeout)
 }
 
 func (s *Serial) Read(buffer []byte) (int, error) {

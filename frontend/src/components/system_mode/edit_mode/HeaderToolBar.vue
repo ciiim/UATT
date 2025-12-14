@@ -85,7 +85,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { message } from "ant-design-vue";
-import { useActionStore } from "../stores/action_store";
+import { useActionStore } from "../../../stores/action_store";
 import {
   GetAllSerial,
   SelectSerialCom,
@@ -95,9 +95,9 @@ import {
   SyncAppSettings,
   SaveApp,
   SyncActions,
-} from "../../wailsjs/go/bsd_testtool/Manager";
-import { bsd_testtool } from "../../wailsjs/go/models";
-import { EventsOn } from "../../wailsjs/runtime/runtime"
+} from "../../../../wailsjs/go/bsd_testtool/Manager";
+import { bsd_testtool } from "../../../../wailsjs/go/models";
+import { EventsOn } from "../../../../wailsjs/runtime/runtime"
 
 const actionStore = useActionStore();
 

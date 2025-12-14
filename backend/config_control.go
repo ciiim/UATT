@@ -47,7 +47,7 @@ type BlockEndActionFeatureField struct {
 }
 
 func (b *BlockEndActionFeatureField) ToAction() IAction {
-	return &EndBlockAction{*b}
+	return &EndBlockAction{*b, -1}
 }
 
 type LabelActionFeatureField struct {
@@ -82,6 +82,15 @@ func (s *StopActionFeatureField) ToAction() IAction {
 	return &StopAction{*s}
 }
 
+type AssignFeatureField struct {
+	AssignTargetVar string `json:"AssignTargetVar"`
+	Expression      string `json:"Expression"`
+}
+
+func (a *AssignFeatureField) ToAction() IAction {
+	return &AssignAction{*a}
+}
+
 func unmarshalControlAction(actionTypeID types.ActionTypeID, b []byte) (any, error) {
 	switch actionTypeID {
 	case types.DeclareAT:
@@ -90,6 +99,12 @@ func unmarshalControlAction(actionTypeID types.ActionTypeID, b []byte) (any, err
 			return nil, err
 		}
 		return &d, nil
+	case types.AssignAT:
+		var a AssignFeatureField
+		if err := json.Unmarshal(b, &a); err != nil {
+			return nil, err
+		}
+		return &a, nil
 	case types.IfAT:
 		var f IfActionFeatureField
 		if err := json.Unmarshal(b, &f); err != nil {

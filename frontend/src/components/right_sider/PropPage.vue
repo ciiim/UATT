@@ -1,382 +1,427 @@
 <template>
   <div>
-  <div class="prop-page" v-if="store.selectedAction">
-    <h3 style="margin-bottom: 16px; color: black">
-      Action 编辑
-      <a-form layout="vertical">
-        <a-form-item label="Action名">
-                <a-input v-model:value="store.selectedAction.Name" />
-        </a-form-item>
-      </a-form>
-    </h3>
+    <div class="prop-page" v-if="store.selectedAction">
+      <h3 style="margin-bottom: 16px; color: black">
+        Action 编辑
+        <a-form layout="vertical">
+          <a-form-item label="Action名">
+            <a-input v-model:value="store.selectedAction.Name" />
+          </a-form-item>
+        </a-form>
+      </h3>
 
-    <!-- IO 类模块 -->
-    <template v-if="isIO">
-      <a-form layout="vertical">
-        <!-- IO 顶级字段 -->
-        <a-form-item label="超时 (ms)">
-          <a-input-number
-            v-model:value="store.selectedAction.TypeFeatureField.TimeoutMs"
-            style="width: 100%"
-          />
-        </a-form-item>
-
-        <!-- IO 子模块数组 -->
-        <a-collapse v-model:activeKey="ioSubModuleActiveKey">
-        <a-collapse-panel
-          v-for="(mod, index) in store.selectedAction.TypeFeatureField.Modules"
-          :key="mod.ModuleUID"
-          :header="moduleList.get(mod.ModuleTypeID)"
-        >
-          <a-divider>子模块 {{ moduleList.get(mod.ModuleTypeID) }}</a-divider>
-
-          <a-form-item label="ModuleUID">
+      <!-- IO 类模块 -->
+      <template v-if="isIO">
+        <a-form layout="vertical">
+          <!-- IO 顶级字段 -->
+          <a-form-item label="超时 (ms)">
             <a-input-number
-              v-model:value="mod.ModuleUID"
-              disabled
+              v-model:value="store.selectedAction.TypeFeatureField.TimeoutMs"
               style="width: 100%"
             />
           </a-form-item>
 
-          <!-- Fill -->
-          <template v-if="mod.ModuleTypeID === 10">
-            <a-form-item label="使用变量">
-              <a-input v-model:value="mod.UseVar" />
-              <a-button type="link" size="small" @click="showVarHelp">
-              查看说明
-            </a-button>
-            </a-form-item>
-          </template>
+          <!-- IO 子模块数组 -->
+          <a-collapse v-model:activeKey="ioSubModuleActiveKey">
+            <a-collapse-panel
+              v-for="(mod, index) in store.selectedAction.TypeFeatureField
+                .Modules"
+              :key="mod.ModuleUID"
+              :header="moduleList.get(mod.ModuleTypeID)"
+            >
+              <a-divider
+                >子模块 {{ moduleList.get(mod.ModuleTypeID) }}</a-divider
+              >
 
-          <!-- Fixed -->
-          <template v-else-if="mod.ModuleTypeID === 11">
-            <a-form-item label="固定内容 (字节数组)">
-              <a-textarea
-                :value="fixedToString(mod.FixedContent)"
-                @blur="(e : any)=> mod.FixedContent = fixedFromString(e.target.value)"
-              />
-            </a-form-item>
-          </template>
+              <a-form-item label="ModuleUID">
+                <a-input-number
+                  v-model:value="mod.ModuleUID"
+                  disabled
+                  style="width: 100%"
+                />
+              </a-form-item>
 
-          <!-- Calc -->
-          <template v-else-if="mod.ModuleTypeID === 12">
-            <a-form-item label="模式">
-              <a-select
-                v-model:value="mod.Mode"
-                style="width: 100%"
-                :options="CalcMode"
-                placeholder="请选择计算模式"
-              />
-            </a-form-item>
-            <a-form-item label="计算函数">
-              <a-select
-                v-model:value="mod.CalcFunc"
-                style="width: 100%"
-                :options="calcFn"
-                placeholder="请选择计算函数"
-              />
-            </a-form-item>
-            <a-form-item label="计算时机" tooltip="如校验和计算需要完整的数据，则需要选择组装后；长度计算则不需要(带有Fill模块时除外)，数据长度开始时已经计算完毕">
-              <a-select
-                v-model:value="mod.CalcTiming"
-                style="width: 100%"
-                :options="CalcTiming"
-                placeholder="请选择计算时机"
-              />
-            </a-form-item>
-            <a-form-item label="占位字节">
-              <a-textarea
-                :value="fixedToString(mod.PlaceholderBytes)"
-                @blur="
+              <!-- Fill -->
+              <template v-if="mod.ModuleTypeID === 10">
+                <a-form-item label="使用变量">
+                  <a-input v-model:value="mod.UseVar" />
+                  <a-button type="link" size="small" @click="showVarHelp">
+                    查看说明
+                  </a-button>
+                </a-form-item>
+              </template>
+
+              <!-- Fixed -->
+              <template v-else-if="mod.ModuleTypeID === 11">
+                <a-form-item label="固定内容 (字节数组)">
+                  <a-textarea
+                    :value="fixedToString(mod.FixedContent)"
+                    @blur="(e : any)=> mod.FixedContent = fixedFromString(e.target.value)"
+                  />
+                </a-form-item>
+              </template>
+
+              <!-- Calc -->
+              <template v-else-if="mod.ModuleTypeID === 12">
+                <a-form-item label="模式">
+                  <a-select
+                    v-model:value="mod.Mode"
+                    style="width: 100%"
+                    :options="CalcMode"
+                    placeholder="请选择计算模式"
+                  />
+                </a-form-item>
+                <a-form-item label="计算函数">
+                  <a-select
+                    v-model:value="mod.CalcFunc"
+                    style="width: 100%"
+                    :options="calcFn"
+                    placeholder="请选择计算函数"
+                  />
+                </a-form-item>
+                <a-form-item
+                  label="计算时机"
+                  tooltip="如校验和计算需要完整的数据，则需要选择组装后；长度计算则不需要(带有Fill模块时除外)，数据长度开始时已经计算完毕"
+                >
+                  <a-select
+                    v-model:value="mod.CalcTiming"
+                    style="width: 100%"
+                    :options="CalcTiming"
+                    placeholder="请选择计算时机"
+                  />
+                </a-form-item>
+                <a-form-item label="占位字节">
+                  <a-textarea
+                    :value="fixedToString(mod.PlaceholderBytes)"
+                    @blur="
                   (e : any) => mod.PlaceholderBytes = fixedFromString(
                     e.target.value
                   )
                 "
-              />
-            </a-form-item>
-            <!-- 多选输入模块UID -->
-            <a-form-item label="输入模块 UID">
-              <a-select
-                v-model:value="mod.CalcInputModulesUID"
-                mode="multiple"
-                style="width: 100%"
-                :options="calcInputOptions(mod)"
-                placeholder="请选择输入模块"
-              />
-            </a-form-item>
-          </template>
+                  />
+                </a-form-item>
+                <!-- 多选输入模块UID -->
+                <a-form-item label="输入模块 UID">
+                  <a-select
+                    v-model:value="mod.CalcInputModulesUID"
+                    mode="multiple"
+                    style="width: 100%"
+                    :options="calcInputOptions(mod)"
+                    placeholder="请选择输入模块"
+                  />
+                </a-form-item>
+              </template>
 
-          <!-- Custom -->
-          <template v-else-if="mod.ModuleTypeID === 13">
-            <a-form-item label="自定义内容 (字节数组)" tooltip="填写 -1 跳过内容检查">
-              <a-textarea
-                :value="fixedToString(mod.CustomContent)"
-                @blur="
+              <!-- Custom -->
+              <template v-else-if="mod.ModuleTypeID === 13">
+                <a-form-item
+                  label="自定义内容 (字节数组)"
+                  tooltip="填写 -1 跳过内容检查"
+                >
+                  <a-textarea
+                    :value="fixedToString(mod.CustomContent)"
+                    @blur="
                   (e : any)=> mod.CustomContent = fixedFromString(e.target.value)
                 "
+                  />
+                </a-form-item>
+                <!-- 多选输入模块UID -->
+                <a-form-item
+                  label="参考输入长度模块 UID"
+                  :rules="[{ required: false }]"
+                  tooltip="指定模块接收到的数据作为custom模块的读取长度"
+                  v-if="store.selectedAction.ActionTypeID == 2"
+                >
+                  <a-select
+                    v-model:value="mod.ReceiveVarLengthModuleUID"
+                    style="width: 100%"
+                    :options="calcInputOptions(mod)"
+                    placeholder="请选择输入模块"
+                    allowClear
+                  />
+                </a-form-item>
+              </template>
+              <a-button danger @click="removeModule(index)">删除模块</a-button>
+              <Divider></Divider>
+            </a-collapse-panel>
+          </a-collapse>
+          <div style="padding-top: 20px">
+            <a-popconfirm
+              title="请选择要新增的模块类型"
+              @confirm="() => addModule(newModuleType)"
+              @cancel="() => (newModuleType = null)"
+            >
+              <template #description>
+                <!-- 在 Popconfirm Description 里放一个 Select -->
+                <a-select v-model:value="newModuleType" style="width: 180px">
+                  <a-select-option :value="10">Fill</a-select-option>
+                  <a-select-option :value="11">Fixed</a-select-option>
+                  <a-select-option :value="12">Calc</a-select-option>
+                  <a-select-option :value="13">Custom</a-select-option>
+                </a-select>
+              </template>
+
+              <a-button type="primary">新增模块</a-button>
+            </a-popconfirm>
+          </div>
+        </a-form>
+      </template>
+
+      <!-- Control 类模块 -->
+      <template v-else-if="isControl">
+        <a-form layout="vertical">
+          <!-- Declare -->
+          <template v-if="store.selectedAction.ActionTypeID === 23">
+            <!-- 变量名 -->
+            <a-form-item label="变量名">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.VarName"
               />
             </a-form-item>
-            <!-- 多选输入模块UID -->
-            <a-form-item label="参考输入长度模块 UID" :rules="[{required: false}]" tooltip="指定模块接收到的数据作为custom模块的读取长度" v-if="store.selectedAction.ActionTypeID == 2">
+
+            <!-- 变量类型选择 -->
+            <a-form-item label="变量类型">
               <a-select
-                v-model:value="mod.ReceiveVarLengthModuleUID"
+                v-model:value="store.selectedAction.TypeFeatureField.VarType"
+                :options="varTypeOptions"
+                placeholder="请选择变量类型"
                 style="width: 100%"
-                :options="calcInputOptions(mod)"
-                placeholder="请选择输入模块"
-                allowClear
               />
             </a-form-item>
-          </template>
-          <a-button danger @click="removeModule(index)">删除模块</a-button>
-          <Divider></Divider>
-          </a-collapse-panel>
-      </a-collapse>
-        <div style="padding-top: 20px">
-          <a-popconfirm
-            title="请选择要新增的模块类型"
-            @confirm="() => addModule(newModuleType)"
-            @cancel="() => (newModuleType = null)"
-          >
-            <template #description>
-              <!-- 在 Popconfirm Description 里放一个 Select -->
-              <a-select v-model:value="newModuleType" style="width: 180px">
-                <a-select-option :value="10">Fill</a-select-option>
-                <a-select-option :value="11">Fixed</a-select-option>
-                <a-select-option :value="12">Calc</a-select-option>
-                <a-select-option :value="13">Custom</a-select-option>
-              </a-select>
-            </template>
 
-            <a-button type="primary">新增模块</a-button>
-          </a-popconfirm>
-        </div>
-      </a-form>
-    </template>
+            <!-- 根据变量类型显示不同的输入框 -->
+            <a-form-item label="变量值">
+              <!-- Number 类型 -->
+              <a-input-number
+                v-if="
+                  store.selectedAction.TypeFeatureField.VarType === 'number'
+                "
+                v-model:value="
+                  store.selectedAction.TypeFeatureField.VarNumberValue
+                "
+                style="width: 100%"
+              />
 
-    <!-- Control 类模块 -->
-    <template v-else-if="isControl">
-      <a-form layout="vertical">
-        <!-- Declare -->
-        <template v-if="store.selectedAction.ActionTypeID === 23">
-      <!-- 变量名 -->
-      <a-form-item label="变量名">
-        <a-input v-model:value="store.selectedAction.TypeFeatureField.VarName" />
-      </a-form-item>
+              <!-- String 类型 -->
+              <a-input
+                v-else-if="
+                  store.selectedAction.TypeFeatureField.VarType === 'string'
+                "
+                v-model:value="
+                  store.selectedAction.TypeFeatureField.VarStringValue
+                "
+              />
 
-      <!-- 变量类型选择 -->
-      <a-form-item label="变量类型">
-        <a-select
-          v-model:value="store.selectedAction.TypeFeatureField.VarType"
-          :options="varTypeOptions"
-          placeholder="请选择变量类型"
-          style="width: 100%"
-        />
-      </a-form-item>
-
-      <!-- 根据变量类型显示不同的输入框 -->
-      <a-form-item label="变量值">
-        <!-- Number 类型 -->
-        <a-input-number
-          v-if="store.selectedAction.TypeFeatureField.VarType === 'number'"
-          v-model:value="store.selectedAction.TypeFeatureField.VarNumberValue"
-          style="width: 100%"
-        />
-
-        <!-- String 类型 -->
-        <a-input
-          v-else-if="store.selectedAction.TypeFeatureField.VarType === 'string'"
-          v-model:value="store.selectedAction.TypeFeatureField.VarStringValue"
-        />
-
-        <!-- ByteArray 类型 -->
-          <a-textarea
-          v-else-if="store.selectedAction?.TypeFeatureField?.VarType === 'array'"
-          :value="fixedToString(store.selectedAction?.TypeFeatureField?.VarByteArrayValue)"
-          @blur="(e: any) => {
+              <!-- ByteArray 类型 -->
+              <a-textarea
+                v-else-if="
+                  store.selectedAction?.TypeFeatureField?.VarType === 'array'
+                "
+                :value="
+                  fixedToString(
+                    store.selectedAction?.TypeFeatureField?.VarByteArrayValue
+                  )
+                "
+                @blur="(e: any) => {
             if (store.selectedAction && store.selectedAction.TypeFeatureField) {
               store.selectedAction.TypeFeatureField.VarByteArrayValue = fixedFromString(e.target.value)
             }
           }"
-        />
+              />
 
-        <!-- JSON 类型（vue-json-editor） -->
-        <json-editor-vue
-          v-else-if="store.selectedAction.TypeFeatureField.VarType === 'JSON'"
-          v-model="store.selectedAction.TypeFeatureField.VarStringValue"
-          mode="text"
-          lang="zh"
-          height="400px"
-        />
+              <!-- JSON 类型（vue-json-editor） -->
+              <json-editor-vue
+                v-else-if="
+                  store.selectedAction.TypeFeatureField.VarType === 'JSON'
+                "
+                v-model="store.selectedAction.TypeFeatureField.VarStringValue"
+                :mode="Mode.text"
+                lang="zh"
+                height="400px"
+              />
 
-        <!-- 如果没选类型 -->
-        <span v-else style="color: #999">请选择变量类型</span>
-      </a-form-item>
-    </template>
+              <!-- 如果没选类型 -->
+              <span v-else style="color: #999">请选择变量类型</span>
+            </a-form-item>
+          </template>
 
-        <!-- IF -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 24">
-          <a-form-item label="条件表达式">
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.Condition"
-            />
-            <a-button type="link" size="small" @click="showFmtHelp">
-              查看说明
-            </a-button>
-          </a-form-item>
-        </template>
+          <!-- Assign -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 32">
+            <a-form-item label="赋值变量">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.AssignTargetVar"
+              />
+            </a-form-item>
+            <a-form-item label="赋值表达式">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.Expression"
+              />
+              <a-button type="link" size="small" @click="showFmtHelp">
+                查看说明
+              </a-button>
+            </a-form-item>
+          </template>
 
-        <!-- ELSE -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 25">
-          <p>ELSE 模块无额外属性</p>
-        </template>
+          <!-- IF -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 24">
+            <a-form-item label="条件表达式">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.Condition"
+              />
+              <a-button type="link" size="small" @click="showFmtHelp">
+                查看说明
+              </a-button>
+            </a-form-item>
+          </template>
 
-        <!-- FOR -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 26">
-          <a-form-item label="使用变量">
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.UseVar"
-            />
-          </a-form-item>
-          <a-form-item label="进入条件">
-            <a-input
-              v-model:value="
-                store.selectedAction.TypeFeatureField.EnterCondition
-              "
-            />
-          </a-form-item>
-          <a-form-item label="变量操作">
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.VarOp"
-            />
-          </a-form-item>
-        </template>
+          <!-- ELSE -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 25">
+            <p>ELSE 模块无额外属性</p>
+          </template>
 
-        <!-- EndBlock -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 27">
-          <p>EndBlock 模块无额外属性</p>
-        </template>
+          <!-- FOR -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 26">
+            <a-form-item label="使用变量">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.UseVar"
+              />
+            </a-form-item>
+            <a-form-item label="进入条件">
+              <a-input
+                v-model:value="
+                  store.selectedAction.TypeFeatureField.EnterCondition
+                "
+              />
+            </a-form-item>
+            <a-form-item label="变量操作">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.VarOp"
+              />
+            </a-form-item>
+          </template>
 
-        <!-- Label -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 28">
-          <a-form-item label="标签名">
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.LabelName"
-            />
-          </a-form-item>
-        </template>
+          <!-- EndBlock -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 27">
+            <p>EndBlock 模块无额外属性</p>
+          </template>
 
-        <!-- GOTO -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 29">
-          <a-form-item label="跳转标签">
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.Label"
-            />
-          </a-form-item>
-        </template>
+          <!-- Label -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 28">
+            <a-form-item label="标签名">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.LabelName"
+              />
+            </a-form-item>
+          </template>
 
-        <!-- ChangeBaudrate -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 30">
-          <a-form-item label="目标波特率">
-            <a-input-number
-              v-model:value="
-                store.selectedAction.TypeFeatureField.TargetBaudRate
-              "
-              style="width: 100%"
-            />
-          </a-form-item>
-        </template>
+          <!-- GOTO -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 29">
+            <a-form-item label="跳转标签">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.Label"
+              />
+            </a-form-item>
+          </template>
 
-        <!-- Stop -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 31">
-          <a-form-item label="停止代码">
-            <a-input-number
-              v-model:value="store.selectedAction.TypeFeatureField.StopCode"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </template>
-      </a-form>
-    </template>
+          <!-- ChangeBaudrate -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 30">
+            <a-form-item label="目标波特率">
+              <a-input-number
+                v-model:value="
+                  store.selectedAction.TypeFeatureField.TargetBaudRate
+                "
+                style="width: 100%"
+              />
+            </a-form-item>
+          </template>
 
-    <!-- Debug 类模块 -->
-    <template v-else-if="isDebug">
-      <a-form layout="vertical">
-        <!-- Print -->
-        <template v-if="store.selectedAction.ActionTypeID === 90">
-          <a-form-item 
-          label="打印格式字符串"
-          >
-            <a-input
-              v-model:value="store.selectedAction.TypeFeatureField.PrintFmt"
-            />
-            <a-button type="link" size="small" @click="showFmtHelp">
-              查看说明
-            </a-button>
-          </a-form-item>
-        </template>
+          <!-- Stop -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 31">
+            <a-form-item label="停止代码">
+              <a-input-number
+                v-model:value="store.selectedAction.TypeFeatureField.StopCode"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </template>
+        </a-form>
+      </template>
 
-        <!-- Delay -->
-        <template v-else-if="store.selectedAction.ActionTypeID === 91">
-          <a-form-item label="延迟时间(ms)">
-            <a-input-number
-              v-model:value="store.selectedAction.TypeFeatureField.DelayMs"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </template>
-      </a-form>
-    </template>
+      <!-- Debug 类模块 -->
+      <template v-else-if="isDebug">
+        <a-form layout="vertical">
+          <!-- Print -->
+          <template v-if="store.selectedAction.ActionTypeID === 90">
+            <a-form-item label="打印格式字符串">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.PrintFmt"
+              />
+              <a-button type="link" size="small" @click="showFmtHelp">
+                查看说明
+              </a-button>
+            </a-form-item>
+          </template>
 
-    <template v-else>
-      <p style="color: black">未识别的 Action 类型</p>
-    </template>
-  </div>
+          <!-- Delay -->
+          <template v-else-if="store.selectedAction.ActionTypeID === 91">
+            <a-form-item label="延迟时间(ms)">
+              <a-input-number
+                v-model:value="store.selectedAction.TypeFeatureField.DelayMs"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </template>
+        </a-form>
+      </template>
 
-  <div v-else>
-    <p style="color: black">请选择一个 Action 编辑属性</p>
-  </div>
+      <template v-else>
+        <p style="color: black">未识别的 Action 类型</p>
+      </template>
+    </div>
 
-  <a-modal
-    v-model:open="helpFmtVisible"
-    title="格式化字符串\表达式 说明"
-    footer=""
-    width="600px"
-  >
-    <p>可以使用占位符获取指定内容：</p>
-    <ul>
-      <li><code>{0}</code> 上一Action名称</li>
-      <li><code>{1}</code> 上一串口接收数据</li>
-      <li><code>{2}</code> 上一Action执行结果</li>
-      <li><code>{3}</code> 当前时间</li>
-      <li><code>{foo}</code> foo变量的值</li>
+    <div v-else>
+      <p style="color: black">请选择一个 Action 编辑属性</p>
+    </div>
 
-    </ul>
+    <a-modal
+      v-model:open="helpFmtVisible"
+      title="格式化字符串\表达式 说明"
+      footer=""
+      width="600px"
+    >
+      <p>可以使用占位符获取指定内容：</p>
+      <ul>
+        <li><code>{0}</code> 上一Action名称</li>
+        <li><code>{1}</code> 上一串口接收数据</li>
+        <li><code>{2}</code> 上一Action执行结果</li>
+        <li><code>{3}</code> 当前时间</li>
+        <li><code>{foo}</code> foo变量的值</li>
+      </ul>
 
-    <p>表达式支持以下语法：</p>
-    <ul>
-      <li> && || < <= > >= != </li>
-    </ul>
+      <p>表达式支持以下语法：</p>
+      <ul>
+        <li>&& || < <= > >= !=</li>
+      </ul>
 
-    <p>数组下标语法：</p>
-    <ul>
-      <li><code>{goo:0}</code> goo数组的第一个字节 等价于goo[0]</li>
-      <li><code>{goo:0,3}</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
-    </ul>
-  </a-modal>
+      <p>数组下标语法：</p>
+      <ul>
+        <li><code>{goo:0}</code> goo数组的第一个字节 等价于goo[0]</li>
+        <li><code>{goo:0,3}</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
+      </ul>
+    </a-modal>
 
-  <a-modal
-    v-model:open="helpVarVisible"
-    title="变量 说明"
-    footer=""
-    width="600px"
-  >
-
-    <p>数组下标语法：</p>
-    <ul>
-      <li><code>goo:0</code> goo数组的第一个字节 等价于goo[0]</li>
-      <li><code>goo:0,3</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
-    </ul>
-  </a-modal>
+    <a-modal
+      v-model:open="helpVarVisible"
+      title="变量 说明"
+      footer=""
+      width="600px"
+    >
+      <p>数组下标语法：</p>
+      <ul>
+        <li><code>goo:0</code> goo数组的第一个字节 等价于goo[0]</li>
+        <li><code>goo:0,3</code> goo数组的[0,3)字节 等价于goo[0:3]</li>
+      </ul>
+    </a-modal>
   </div>
 </template>
 
@@ -384,15 +429,16 @@
 import { computed, watch, ref, onMounted } from "vue";
 import { useActionStore } from "../../stores/action_store";
 import { parseActionTags } from "../../utils/action_utils";
-import { GetAllCalcFn } from "../../../wailsjs/go/bsd_testtool/Manager"
+import { GetAllCalcFn } from "../../../wailsjs/go/bsd_testtool/Manager";
 import { Divider } from "ant-design-vue";
-import JsonEditorVue from 'json-editor-vue'
+import JsonEditorVue from "json-editor-vue";
+import { Mode } from "vanilla-jsoneditor";
 
 const store = useActionStore();
 
 onMounted(() => {
   getCalcFn();
-})
+});
 
 const newModuleType = ref<number | null>(null);
 
@@ -404,27 +450,24 @@ const showVarHelp = () => (helpVarVisible.value = true);
 const ioSubModuleActiveKey = ref([]);
 
 const varTypeOptions = [
-  { label: '数字(Number)', value: 'number' },
-  { label: '文本(String)', value: 'string' },
-  { label: '字节数组(ByteArray)', value: 'array' },
-  { label: 'JSON', value: 'JSON' }
-]
+  { label: "数字(Number)", value: "number" },
+  { label: "文本(String)", value: "string" },
+  { label: "字节数组(ByteArray)", value: "array" },
+  { label: "JSON", value: "JSON" },
+];
 
 watch(
   () => store.selectedAction?.TypeFeatureField,
   (newVal) => {
-    
     if (store.selectedAction) {
       const sa = store.selectedAction as any;
       sa.Tags = parseActionTags(store.selectedAction);
       store.selectedAction = sa;
       console.log("change ");
-      
     }
   },
   { deep: true }
 );
-
 
 const addModule = (typeId: number | null) => {
   if (!store.selectedAction || !typeId) return;
@@ -472,7 +515,7 @@ const createModuleTemplate = (typeId: number, uid: number) => {
         ModuleUID: uid,
         ModuleTypeID: typeId,
         CustomContent: [],
-        ReceiveVarLengthModuleUID: typeId
+        ReceiveVarLengthModuleUID: typeId,
       };
     default:
       return {
@@ -520,22 +563,27 @@ const moduleList = new Map([
   [13, "Custom"],
 ]);
 
-const CalcMode = [{label: '计算', value: 'Calc'}, {label:'检查', value: 'Check'}]
+const CalcMode = [
+  { label: "计算", value: "Calc" },
+  { label: "检查", value: "Check" },
+];
 
-const CalcTiming = [{label: '即时', value: 'Now'}, {label:'组装后', value: 'Post'}]
+const CalcTiming = [
+  { label: "即时", value: "Now" },
+  { label: "组装后", value: "Post" },
+];
 
-const calcFn = ref<{label: string, value: string}[]>()
+const calcFn = ref<{ label: string; value: string }[]>();
 
 const getCalcFn = () => {
   GetAllCalcFn().then((res) => {
-      const fnList =  res.map((v : string) => ({
-        label: v,
-        value: v,
-      }))
-      calcFn.value = fnList
-  })
-
-}
+    const fnList = res.map((v: string) => ({
+      label: v,
+      value: v,
+    }));
+    calcFn.value = fnList;
+  });
+};
 
 const calcInputOptions = (currentMod: any) => {
   const modules = store.selectedAction?.TypeFeatureField?.Modules ?? [];

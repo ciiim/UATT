@@ -16,12 +16,19 @@ var testVar variable = variable{
 	v:       []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 }
 
+var testNumberVar variable = variable{
+	varName: "testNumber",
+	varType: VarNumber,
+	v:       int(100),
+}
+
 var TestActionContext ActionContext = ActionContext{
 	LastActionName:   "Send 11",
 	LastSerialBuffer: []byte{0xAA, 0xFF, 0x01, 0x05, 0x55, 0x55, 0x55},
 	LastExecResult:   errors.New("test error"),
 	variableMap: map[string]*variable{
-		"test": &testVar,
+		"test":       &testVar,
+		"testNumber": &testNumberVar,
 	},
 }
 
@@ -145,7 +152,11 @@ func FmtGetVar(varFmt string, ctx *ActionContext) any {
 		} else if arrIndexBegin != -1 {
 			return vArr[arrIndexBegin]
 		} else {
-			return vArr
+			if v.varType == VarNumber {
+				return vArr[0]
+			} else {
+				return vArr
+			}
 		}
 	}
 
@@ -282,10 +293,17 @@ const (
 	TokenConst // 0x0A | 10
 	TokenLB    // (
 	TokenRB    // )
+
+	TokenAdd   // +
+	TokenMinus // -
 )
 
 func (t tokenType) isCompare() bool {
 	return (t >= TokenLt && t <= TokenNotEq)
+}
+
+func (t tokenType) isAddMinus() bool {
+	return (t >= TokenAdd && t <= TokenMinus)
 }
 
 type AstNode struct {
@@ -317,6 +335,14 @@ func toBool(v int) bool {
 	return v > 0
 }
 
+func addOp(lv, rv int) int {
+	return lv + rv
+}
+
+func minusOp(lv, rv int) int {
+	return lv - rv
+}
+
 func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 	switch a.Type {
 	case NodeOp:
@@ -333,6 +359,7 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 		lvo := 0
 		rvo := 0
 
+		// 把所有类型的值都转换成int
 		switch t := lv.(type) {
 		case int:
 			lvo = t
@@ -348,7 +375,7 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 		case uint8:
 			lvo = int(t)
 		default:
-			return nil, fmt.Errorf("unsupport type %V", t)
+			return nil, fmt.Errorf("lv unsupport type %V", t)
 		}
 
 		switch t := rv.(type) {
@@ -366,9 +393,10 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 		case uint8:
 			rvo = int(t)
 		default:
-			return nil, fmt.Errorf("unsupport type %V", t)
+			return nil, fmt.Errorf("rv unsupport type %V", t)
 		}
 
+		// 根据运算符做实际运算
 		switch a.Value {
 		case "==":
 			return compareEq(lvo, rvo), nil
@@ -386,6 +414,10 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 			return compareNum(lvo, rvo) <= 0, nil
 		case ">=":
 			return compareNum(lvo, rvo) >= 0, nil
+		case "+":
+			return addOp(lvo, rvo), nil
+		case "-":
+			return minusOp(lvo, rvo), nil
 		}
 	case NodeConst:
 		n, err := strconv.ParseInt(a.Value, 0, 64)
@@ -394,6 +426,7 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 		}
 		return n, nil
 	case NodeVar:
+		// FmtGetVar要求输入varFmt不带{}
 		v := FmtGetVar(a.Value[1:len(a.Value)-1], ctx)
 		switch t := v.(type) {
 		case string:
@@ -413,7 +446,8 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 0. ||
 1. &&
 2. ==, !=, >, <, >=, <=
-3. 括号
+3. +, -
+5. 括号
 
 {test} > 0x10 || {1:5} == 0x00
 */
@@ -476,7 +510,7 @@ func (p *parser) parseOr() *AstNode {
 
 	for p.t[p.idx].toType == TokenOr {
 		value := p.nowToken().t
-		p.advanceToken()
+		_ = p.advanceToken()
 		right := p.parseAnd()
 		left = &AstNode{
 			Type:  NodeOp,
@@ -493,7 +527,7 @@ func (p *parser) parseAnd() *AstNode {
 
 	for p.t[p.idx].toType == TokenAnd {
 		value := p.nowToken().t
-		p.advanceToken()
+		_ = p.advanceToken()
 		right := p.parseCompare()
 		left = &AstNode{
 			Type:  NodeOp,
@@ -506,11 +540,28 @@ func (p *parser) parseAnd() *AstNode {
 }
 
 func (p *parser) parseCompare() *AstNode {
-	left := p.parsePrimary()
+	left := p.parseAddMinus()
 
 	for p.t[p.idx].toType.isCompare() {
 		value := p.nowToken().t
-		p.advanceToken()
+		_ = p.advanceToken()
+		right := p.parseAddMinus()
+		left = &AstNode{
+			Type:  NodeOp,
+			Value: value,
+			Left:  left,
+			Right: right,
+		}
+	}
+	return left
+}
+
+func (p *parser) parseAddMinus() *AstNode {
+	left := p.parsePrimary()
+
+	for p.t[p.idx].toType.isAddMinus() {
+		value := p.nowToken().t
+		_ = p.advanceToken()
 		right := p.parsePrimary()
 		left = &AstNode{
 			Type:  NodeOp,
@@ -525,15 +576,15 @@ func (p *parser) parseCompare() *AstNode {
 func (p *parser) parsePrimary() *AstNode {
 	// 匹配括号
 	if p.nowToken().toType == TokenLB {
-		p.advanceToken()
+		_ = p.advanceToken()
 		res := p.parseOr()
-		p.advanceToken()
+		_ = p.advanceToken()
 		return res
 	}
 	// 基本元素
 	if p.nowToken().toType == TokenVar {
 		value := p.nowToken().t
-		p.advanceToken()
+		_ = p.advanceToken()
 		return &AstNode{
 			Type:  NodeVar,
 			Value: value,
@@ -542,7 +593,7 @@ func (p *parser) parsePrimary() *AstNode {
 
 	if p.nowToken().toType == TokenConst {
 		value := p.nowToken().t
-		p.advanceToken()
+		_ = p.advanceToken()
 		return &AstNode{
 			Type:  NodeConst,
 			Value: value,
@@ -570,6 +621,10 @@ func getOpTokenType(t string) tokenType {
 		return TokenEq
 	case "!=":
 		return TokenNotEq
+	case "+":
+		return TokenAdd
+	case "-":
+		return TokenMinus
 	default:
 		return -1
 	}
@@ -613,7 +668,7 @@ func isHexDigit(ch byte) bool {
 
 func isOperatorChar(ch byte) bool {
 	switch ch {
-	case '=', '!', '>', '<', '&', '|':
+	case '=', '!', '>', '<', '&', '|', '+', '-':
 		return true
 	}
 	return false
@@ -621,7 +676,7 @@ func isOperatorChar(ch byte) bool {
 
 func isValidSingleOpChar(ch byte) bool {
 	switch ch {
-	case '>', '<':
+	case '>', '<', '+', '-':
 		return true
 	}
 	return false

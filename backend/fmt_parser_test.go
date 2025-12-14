@@ -23,6 +23,27 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
+func TestAdd(t *testing.T) {
+	str := "{testNumber} + 1 + 10"
+
+	p := bsd_testtool.NewParser(str)
+
+	t.Logf("parser: %v\n", p)
+
+	ast := p.GetAST()
+
+	t.Logf("ast: %v\n", ast)
+
+	ast.Pretty("", true)
+
+	is, err := ast.Eval(&bsd_testtool.TestActionContext)
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Printf("is: %v\n", is)
+}
+
 func TestParser(t *testing.T) {
 	str := "{1:1} == 0x01 && (1 == 1 || 1 > 0)"
 

@@ -23,6 +23,7 @@ Control 类模块
     7. GOTO模块 [ActionTypeID 29]
     8. ChangeBaudrate模块 [ActionTypeID 30]
     9. Stop模块 [ActionTypeID 31]
+    10. Assign模块 [ActionTypeID 32]
 
 ---
 Debug 类模块

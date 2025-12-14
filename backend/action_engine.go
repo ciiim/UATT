@@ -72,6 +72,9 @@ type controlFlow struct {
 
 	expressionAst *AstNode
 
+	// for循环赋值操作的ast
+	assignAst *AstNode
+
 	TrueUID      types.ActionUID // IF 成立执行的下一个 UID
 	FalseUID     types.ActionUID // IF 不成立执行的下一个 UID
 	EndUID       types.ActionUID // FOR/IF 最终要跳到的 BLOCKEND
@@ -89,6 +92,9 @@ type ActionContext struct {
 
 	// 变量表
 	variableMap map[string]*variable
+
+	// 赋值Ast表
+	assignMap map[types.ActionUID]*AstNode
 
 	// UID表，用于引用的快速获取
 	actionUIDMap map[types.ActionUID]*Action
@@ -177,6 +183,7 @@ func (a *ActionEngine) PreCompile() error {
 		actionFirst:      a.app.firstAction,
 		actionUIDMap:     a.app.actionMap,
 		variableMap:      make(map[string]*variable),
+		assignMap:        make(map[types.ActionUID]*AstNode),
 		controlFlowMap:   make(map[types.ActionUID]*controlFlow),
 		labelMap:         make(map[string]types.ActionUID),
 		nowAction:        nil,
@@ -222,6 +229,22 @@ func (a *ActionEngine) PreCompile() error {
 				v.v = tmp.VarStringValue
 			}
 			a.ctx.variableMap[tmp.VarName] = v
+
+		}
+
+		if t == types.AssignAT {
+			assignField, has := nowAction.action.(*AssignAction)
+			if !has {
+				return ErrInvalidAction
+			}
+
+			parser := NewParser(assignField.Expression)
+			if parser == nil {
+				return ErrInvalidExpression
+			}
+
+			a.ctx.assignMap[nowAction.actionUID] = parser.GetAST()
+
 		}
 
 		// label表
@@ -231,6 +254,7 @@ func (a *ActionEngine) PreCompile() error {
 				return ErrInvalidAction
 			}
 			a.ctx.labelMap[tmp.LabelName] = nowAction.actionUID
+
 		}
 
 		// 控制流表
@@ -282,6 +306,28 @@ func (a *ActionEngine) PreCompile() error {
 				i:  ifcf.i,
 			})
 		case types.ForLabelAT:
+			forField, has := nowAction.action.(*ForAction)
+			if !has {
+				return ErrInvalidAction
+			}
+
+			parser := NewParser(forField.EnterCondition)
+			if parser == nil {
+				return ErrInvalidExpression
+			}
+
+			forParser := NewParser(forField.VarOp)
+			if forParser == nil {
+				return ErrInvalidExpression
+			}
+
+			// 加入map
+			a.ctx.controlFlowMap[nowAction.actionUID] = &controlFlow{
+				controlType:   t,
+				expressionAst: parser.GetAST(),
+				assignAst:     forParser.GetAST(),
+			}
+
 			// 压栈
 			controlFlowStack = append(controlFlowStack, tempControlInfo{
 				ct: t,
@@ -291,14 +337,20 @@ func (a *ActionEngine) PreCompile() error {
 
 			top := controlFlowStack[len(controlFlowStack)-1]
 
-			if top.ct == types.IfAT || top.ct == types.ElseAT {
-				cf, has := a.ctx.controlFlowMap[controlFlowStack[len(controlFlowStack)-1].i]
-				// 忽略多余的EndBlock，不算做错误
-				if !has {
-					continue
-				}
+			cf, has := a.ctx.controlFlowMap[controlFlowStack[len(controlFlowStack)-1].i]
+			// 忽略多余的EndBlock，不算做错误
+			if !has {
+				continue
+			}
+			if top.ct == types.IfAT {
+				cf.FalseUID = nowAction.actionUID
+			} else if top.ct == types.ElseAT {
 				cf.EndUID = nowAction.actionUID
 			} else if top.ct == types.ForLabelAT {
+
+				forCf := a.ctx.controlFlowMap[top.i]
+				forCf.EndUID = nowAction.actionUID
+
 				// 如果是for类型，还得往map里插入一个可以通过endblock的index查找的元素
 				// 加进map里面
 				a.ctx.controlFlowMap[nowAction.actionUID] = &controlFlow{
@@ -436,7 +488,6 @@ func (a *ActionEngine) innerStart() error {
 			return err
 		}
 
-		fmt.Printf("now id:%v", a.ctx.nowAction.actionUID)
 	}
 
 	if a.ctx.LastExecResult != nil {
@@ -447,7 +498,7 @@ func (a *ActionEngine) innerStart() error {
 
 		if a.ctx.log != nil {
 			for _, l := range a.ctx.log {
-				l.Write([]byte(printStr))
+				_, _ = l.Write([]byte(printStr))
 			}
 		}
 

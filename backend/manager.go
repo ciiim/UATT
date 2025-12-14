@@ -150,7 +150,7 @@ func (m *Manager) Start() error {
 }
 
 func (m *Manager) stopCB() {
-	m.Stop()
+	_ = m.Stop()
 }
 
 func (m *Manager) Stop() error {
@@ -158,6 +158,8 @@ func (m *Manager) Stop() error {
 	if m.runningEngine == nil {
 		return nil
 	}
+
+	fmt.Println("Manager.Stop")
 
 	m.runningEngine.Stop()
 

@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref } from 'vue';
+import {ref } from 'vue';
 import { DeleteOutlined, ClockCircleOutlined, StopOutlined, LineOutlined, MoreOutlined, BranchesOutlined,FontColorsOutlined, EnterOutlined, PrinterOutlined,PlayCircleOutlined, FlagOutlined, SendOutlined, DownloadOutlined, QuestionOutlined } from '@ant-design/icons-vue';
 
 import type { ConfigActionBase } from "../types/Action";

@@ -24,7 +24,7 @@
 
 
 <script setup lang="ts">
-import { reactive, ref, Transition, defineProps, watch } from "vue";
+import { reactive, ref, Transition, watch } from "vue";
 import type { ConfigActionBase } from "../types/Action";
 import ModuleList from "./right_sider/ModuleList.vue";
 import PropPage from "./right_sider/PropPage.vue";

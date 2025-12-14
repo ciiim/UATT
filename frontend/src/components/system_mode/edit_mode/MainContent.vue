@@ -36,20 +36,20 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
 
-import { GetActionList } from "../../wailsjs/go/bsd_testtool/Manager";
+import { GetActionList } from "../../../../wailsjs/go/bsd_testtool/Manager";
 
-import { EventsOn } from "../../wailsjs/runtime/runtime"
+import { EventsOn } from "../../../../wailsjs/runtime/runtime"
 
-import { parseActionTags, computeIndents } from "../utils/action_utils";
+import { parseActionTags, computeIndents } from "../../../utils/action_utils";
 
-import type { ConfigActionBase, ActionReport } from "../types/Action";
+import type { ConfigActionBase, ActionReport } from "../../../types/Action";
 
 import draggable from "vuedraggable";
 
-import { defineProps } from "vue";
-import { useActionStore } from "../stores/action_store";
+
+import { useActionStore } from "../../../stores/action_store";
 import { message } from "ant-design-vue";
-import { bsd_testtool } from "../../wailsjs/go/models";
+import { bsd_testtool } from "../../../../wailsjs/go/models";
 
 const prop = defineProps<{
   actionLibrary: any[];

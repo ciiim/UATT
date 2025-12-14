@@ -92,10 +92,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons-vue";
-import { GetAllAppName, LoadApp, CreateApp, DeleteApp } from "../../wailsjs/go/bsd_testtool/Manager";
+import { GetAllAppName, LoadApp, CreateApp, DeleteApp } from "../../../../wailsjs/go/bsd_testtool/Manager";
 import { message } from "ant-design-vue";
-import { useActionStore } from "../stores/action_store";
-import { bsd_testtool } from "../../wailsjs/go/models";
+import { useActionStore } from "../../../stores/action_store";
+import { bsd_testtool } from "../../../../wailsjs/go/models";
 
 const apps = ref<string[]>([]);
 const selectedApp = ref<string>("");

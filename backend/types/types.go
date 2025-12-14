@@ -38,6 +38,8 @@ const (
 	ChangeBaudRateAT ActionTypeID = 30
 
 	StopAT ActionTypeID = 31
+
+	AssignAT ActionTypeID = 32
 )
 
 const (

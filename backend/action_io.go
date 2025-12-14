@@ -3,9 +3,14 @@ package bsd_testtool
 import (
 	"bsd_testtool/backend/types"
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"time"
+
+	"go.bug.st/serial"
 )
 
 type IOAction struct {
@@ -340,6 +345,24 @@ func (calc *IOCalcModule) calc(ctx *IOModuleCtx) (length int, res []byte, err er
 	return
 }
 
+func writeWithTimeout(ctx context.Context, writer io.Writer, p []byte) (int, error) {
+	type writeResult struct {
+		n   int
+		err error
+	}
+	resultCh := make(chan writeResult, 1)
+	go func() {
+		n, err := writer.Write(p)
+		resultCh <- writeResult{n: n, err: err}
+	}()
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case result := <-resultCh:
+		return result.n, result.err
+	}
+}
+
 func (s *SendAction) doAction(ctx *ActionContext) error {
 
 	b, err := BuildSendBytesArray(s, ctx)
@@ -347,11 +370,18 @@ func (s *SendAction) doAction(ctx *ActionContext) error {
 		ctx.SetController(&EnginControllor{nextUID: StopUID})
 		return err
 	}
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Duration(s.TimeoutMs)*time.Millisecond)
+	defer cancel()
 
-	sentLength, err := ctx.serial.Write(b)
+	sentLength, err := writeWithTimeout(timeoutCtx, ctx.serial, b)
 	if err != nil {
-		ctx.SetController(&EnginControllor{nextUID: StopUID})
-		return err
+		if errors.Is(err, context.DeadlineExceeded) {
+			ctx.DefaultNextAction()
+			return fmt.Errorf("write timeout")
+		} else {
+			ctx.SetController(&EnginControllor{nextUID: StopUID})
+			return err
+		}
 	}
 
 	if sentLength != len(b) {
@@ -359,16 +389,47 @@ func (s *SendAction) doAction(ctx *ActionContext) error {
 		return fmt.Errorf("sent %d, expect %d", sentLength, len(b))
 	}
 
-	ctx.SetController(&defaultNextControl)
+	ctx.DefaultNextAction()
 
 	return nil
 }
 
+func readWithTimeout(ctx context.Context, reader io.Reader, p []byte) (int, error) {
+	type readResult struct {
+		n   int
+		err error
+	}
+	resultCh := make(chan readResult, 1)
+	go func() {
+		n, err := reader.Read(p)
+		resultCh <- readResult{n: n, err: err}
+	}()
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case result := <-resultCh:
+		return result.n, result.err
+	}
+}
+
 func (r *ReceiveAction) doAction(ctx *ActionContext) error {
+
+	if len(r.Modules) == 0 {
+		return errors.New("no need recvive")
+	}
+
+	fmt.Println("start recvive")
+
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Duration(r.TimeoutMs)*time.Millisecond)
+
+	defer cancel()
 
 	modCtx := r.GetContext()
 
 	modCtx.subBytes = make([][]byte, len(r.Modules))
+
+	_ = ctx.serial.SetReadTimeout(serial.NoTimeout)
+	defer ctx.serial.SetReadTimeout(time.Duration(0))
 
 	// 一个个模块读取，遇到Custom里指定UID的，就向前查找要读取的字节数
 	for i, m := range r.Modules {
@@ -385,10 +446,15 @@ func (r *ReceiveAction) doAction(ctx *ActionContext) error {
 
 		totalLength := 0
 		for totalLength != recvLength {
-			rLength, err := ctx.serial.Read(recvBuffer[totalLength:])
+			rLength, err := readWithTimeout(timeoutCtx, ctx.serial, recvBuffer[totalLength:])
 			if err != nil {
-				ctx.SetController(&EnginControllor{nextUID: StopUID})
-				return err
+				if errors.Is(err, context.DeadlineExceeded) {
+					ctx.DefaultNextAction()
+					return fmt.Errorf("read timeout, read:%d bytes, expect:%d bytes", recvLength, totalLength)
+				} else {
+					ctx.SetController(&EnginControllor{nextUID: StopUID})
+					return err
+				}
 			}
 			fmt.Printf("read %d bytes, %v\n", rLength, recvBuffer)
 			totalLength += rLength
@@ -404,7 +470,7 @@ func (r *ReceiveAction) doAction(ctx *ActionContext) error {
 	uid, err := CheckReceiveBytesArray(r, ctx, modCtx)
 	if err != nil {
 		ctx.SetController(&EnginControllor{nextUID: StopUID})
-		return fmt.Errorf("err:%s, uid:%d", err, uid)
+		return fmt.Errorf("check failed:%s, uid:%d", err, uid)
 	}
 
 	ctx.SetController(&defaultNextControl)
