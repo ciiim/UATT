@@ -6,7 +6,7 @@
     :trigger="null"
     collapsible
   >
-    <LeftSiderMenu @app-loaded="notifyGetCanvasList"></LeftSiderMenu>
+    <LeftCanvasList @canvas-loaded="notifyGetCanvasContent"></LeftCanvasList>
   </a-layout-sider>
   <a-layout>
     <a-layout-header :style="headerStyle">
@@ -22,7 +22,7 @@
         @click="() => (leftCollapsed = !leftCollapsed)"
       />
 
-      <HeaderToolBar></HeaderToolBar>
+      <CanvasHeaderToolBar></CanvasHeaderToolBar>
 
       <!-- 右菜单折叠按钮 -->
       <menu-fold-outlined
@@ -38,10 +38,10 @@
     </a-layout-header>
 
     <a-layout-content :style="contentStyle">
-      <MainContent
-        :need-get-canvas-list="needGetCanvasList"
+      <MainCanvas
+        :need-get-canvas-list="needGetCanvas"
         :canvas-tool-Library="canvasToolLibrary"
-      ></MainContent>
+      ></MainCanvas>
     </a-layout-content>
   </a-layout>
 
@@ -55,13 +55,24 @@
     collapsible
     reverseArrow
   >
-    <RightSider :canvas-tool-library="canvasToolLibrary"></RightSider>
+    <RightToolBox :canvas-tool-library="canvasToolLibrary"></RightToolBox>
   </a-layout-sider>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import type { CSSProperties } from "vue";
+import LeftCanvasList from "./LeftCanvasList.vue";
+import CanvasHeaderToolBar from "./CanvasHeaderToolBar.vue";
+import MainCanvas from "./MainCanvas.vue";
+import {
+  MenuUnfoldOutlined,
+  MenuFoldOutlined,
+  FolderViewOutlined,
+  EditOutlined,
+  FundProjectionScreenOutlined,
+} from "@ant-design/icons-vue";
+import RightToolBox from "./RightToolBox.vue";
 
 defineProps<{rightSiderWidth : number}>();
 
@@ -91,4 +102,13 @@ const contentStyle: CSSProperties = {
 
 const leftCollapsed = ref<boolean>(false);
 const rightCollapsed = ref<boolean>(false);
+
+const needGetCanvas = ref<boolean>(false);
+
+const notifyGetCanvasContent = () => {
+  needGetCanvas.value = !needGetCanvas.value
+}
+
+const canvasToolLibrary = ref([
+])
 </script>

@@ -41,9 +41,12 @@ const changeSystemMode = (mode : SystemMode) => {
 	switch(mode) {
 		case SystemMode.EditMode:
 			nowSystemModeFrame.value = EditMode
+			break
 		case SystemMode.CanvasMode:
 			nowSystemModeFrame.value = CanvasMode
+			break
 		case SystemMode.CanvasViewMode:
+			break
 	}
 }
 

@@ -37,10 +37,12 @@ declare module 'vue' {
     ASwitch: typeof import('ant-design-vue/es')['Switch']
     ATag: typeof import('ant-design-vue/es')['Tag']
     ATextarea: typeof import('ant-design-vue/es')['Textarea']
+    CanvasHeaderToolBar: typeof import('./src/components/system_mode/canvas_mode/CanvasHeaderToolBar.vue')['default']
     CanvasMode: typeof import('./src/components/system_mode/canvas_mode/CanvasMode.vue')['default']
     CanvasToolBox: typeof import('./src/components/right_sider/CanvasToolBox.vue')['default']
     EditMode: typeof import('./src/components/system_mode/edit_mode/EditMode.vue')['default']
     HeaderToolBar: typeof import('./src/components/system_mode/edit_mode/HeaderToolBar.vue')['default']
+    LeftCanvasList: typeof import('./src/components/system_mode/canvas_mode/LeftCanvasList.vue')['default']
     LeftSiderMenu: typeof import('./src/components/system_mode/edit_mode/LeftSiderMenu.vue')['default']
     LogPanel: typeof import('./src/components/right_sider/LogPanel.vue')['default']
     MainCanvas: typeof import('./src/components/system_mode/canvas_mode/MainCanvas.vue')['default']
@@ -49,6 +51,8 @@ declare module 'vue' {
     ModuleList: typeof import('./src/components/right_sider/ModuleList.vue')['default']
     PropPage: typeof import('./src/components/right_sider/PropPage.vue')['default']
     RightSider: typeof import('./src/components/RightSider.vue')['default']
+    RightToolBox: typeof import('./src/components/system_mode/canvas_mode/RightToolBox.vue')['default']
     TestModuleCard: typeof import('./src/components/TestModuleCard.vue')['default']
+    WidgetWrapper: typeof import('./src/components/system_mode/canvas_mode/WidgetWrapper.vue')['default']
   }
 }
