@@ -23,18 +23,6 @@
       />
 
       <CanvasHeaderToolBar></CanvasHeaderToolBar>
-
-      <!-- 右菜单折叠按钮 -->
-      <menu-fold-outlined
-        v-if="rightCollapsed"
-        class="right-trigger"
-        @click="() => (rightCollapsed = !rightCollapsed)"
-      />
-      <menu-unfold-outlined
-        v-else
-        class="right-trigger"
-        @click="() => (rightCollapsed = !rightCollapsed)"
-      />
     </a-layout-header>
 
     <a-layout-content :style="contentStyle">
@@ -44,19 +32,6 @@
       ></MainCanvas>
     </a-layout-content>
   </a-layout>
-
-  <a-layout-sider
-    :width="rightSiderWidth"
-    :style="siderStyle"
-    breakpoint="lg"
-    collapsed-width="0"
-    :trigger="null"
-    v-model:collapsed="rightCollapsed"
-    collapsible
-    reverseArrow
-  >
-    <RightToolBox :canvas-tool-library="canvasToolLibrary"></RightToolBox>
-  </a-layout-sider>
 </template>
 
 <script setup lang="ts">
@@ -72,7 +47,7 @@ import {
   EditOutlined,
   FundProjectionScreenOutlined,
 } from "@ant-design/icons-vue";
-import RightToolBox from "./RightToolBox.vue";
+import { message } from "ant-design-vue";
 
 defineProps<{rightSiderWidth : number}>();
 
@@ -98,6 +73,19 @@ const contentStyle: CSSProperties = {
   backgroundColor: "whitegray",
   overflow: "auto",
   flex: 1,
+};
+
+const handleKeyDown = async (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault(); // 阻止浏览器保存网页
+    try {
+      message.success("保存成功", 1);
+    } catch (err) {
+      if (err != "could not found app") {
+        message.error("保存失败," + err);
+      }
+    }
+  }
 };
 
 const leftCollapsed = ref<boolean>(false);

@@ -16,9 +16,9 @@
           {{ port }}
         </a-select-option>
       </a-select>
-      <a-button class="btn" type="primary" v-if="nowRunningStatus == 0" @click="startAction">运行</a-button>
+      <a-button class="btn" type="primary" v-if="nowRunningStatus == 0" @click="openSerialPort">打开</a-button>
       <a-button class="btn" type="primary" v-if="nowRunningStatus == 2" >等待结束</a-button>
-      <a-button class="btn" type="primary" v-if="nowRunningStatus == 1"  @click="stopAction">停止</a-button>
+      <a-button class="btn" type="primary" v-if="nowRunningStatus == 1"  @click="closeSerialPort">关闭</a-button>
       <a-button class="btn" type="primary" @click="onSave">保存</a-button>
       <a-button class="btn" type="primary" @click="openSetting">设置</a-button>
     </div>
@@ -151,7 +151,7 @@ const onSelectSerial = async (port: string) => {
   }
 };
 
-const startAction = async () => {
+const openSerialPort = async () => {
   try {
     await onSave()
     actionStore.nowRightSiderTabIndex = 2;
@@ -163,7 +163,7 @@ const startAction = async () => {
 
 };
 
-const stopAction = async () => {
+const closeSerialPort = async () => {
   nowRunningStatus.value = 2
   await Stop()
   nowRunningStatus.value = 0
