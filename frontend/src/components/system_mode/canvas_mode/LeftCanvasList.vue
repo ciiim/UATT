@@ -37,13 +37,31 @@
         </div>
       </a-card>
     </div>
+
+    <a-modal
+    v-model:open="addModalVisible"
+    title="新增画布"
+    @ok="handleAddCanvas"
+    width="600px"
+  >
+    <a-form
+      :model="formData"
+      :label-col="{ span: 6 }"
+      :wrapper-col="{ span: 16 }"
+    >
+      <a-form-item label="画布名称" required>
+        <a-input v-model:value="formData.CanvasName" />
+      </a-form-item>
+
+    </a-form>
+  </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons-vue";
-import { GetAllAppName, LoadApp, CreateApp, DeleteApp } from "../../../../wailsjs/go/bsd_testtool/Manager";
+import { GetAllAppName, LoadCanvas, CreateCanvas, DeleteCanvas } from "../../../../wailsjs/go/bsd_testtool/Manager";
 import { message } from "ant-design-vue";
 import { useActionStore } from "../../../stores/action_store";
 import { bsd_testtool } from "../../../../wailsjs/go/models";
@@ -87,29 +105,21 @@ const selectCanvas = async (app: string) => {
   }
 };
 
+const addModalVisible = ref(false);
 
 const addCanvas = () => {
-
+  addModalVisible.value = true;
 };
 
 // 表单数据
-const formData = ref(new bsd_testtool.AppConfigSettings({
-  AppName: "",
-  SerialConfig: {
-    BaudRate: 9600,
-    DataBits: 8,
-    Parity: "None",
-    StopBits: 1,
-  },
-  LogEnable: false,
-  LogExportEnable: false,
-  LogExportLoaction: "",
+const formData = ref(new bsd_testtool.CanvasConfigBase({
+  CanvasName: ''
 }));
 
 // 提交表单
 const handleAddCanvas = async () => {
   try {
-    // await CreateApp(formData.value);
+    await CreateCanvas(formData.value);
     message.success("新增画布成功");
     loadCanvasList();
   } catch (err) {
@@ -117,10 +127,10 @@ const handleAddCanvas = async () => {
     message.error("新增画布失败");
   }
 };
-const deleteCanvas = async (app: string) => {
-  message.success(`已删除：${app}`);
-//   await DeleteApp(app)
-  canvasList.value = canvasList.value.filter((a) => a !== app);
+const deleteCanvas = async (canvas: string) => {
+  message.success(`已删除：${canvas}`);
+  await DeleteCanvas(canvas)
+  canvasList.value = canvasList.value.filter((a) => a !== canvas);
 };
 </script>
 

@@ -27,10 +27,15 @@ type Manager struct {
 	appFileNames  []string
 	nowApp        *App
 	runningEngine *ActionEngine
+
+	canvasFolder    string
+	canvasFileNames []string
+	nowCanvasName   string
 }
 
 var ErrNotFoundApp error = errors.New("could not found app")
 var ErrAppExist error = errors.New("app exist")
+var ErrCanvasExist error = errors.New("canvas exist")
 
 var GlobalManager Manager
 
@@ -124,6 +129,7 @@ func (m *Manager) DoStep() error {
 	return nil
 }
 
+// 从编辑模式启动的App
 func (m *Manager) Start() error {
 	if m.nowApp == nil {
 		return ErrNotFoundApp
@@ -151,6 +157,18 @@ func (m *Manager) Start() error {
 
 func (m *Manager) stopCB() {
 	_ = m.Stop()
+}
+
+func (m *Manager) canvasStopCB() {
+	if m.runningEngine == nil {
+		return
+	}
+
+	fmt.Println("Manager.canvasAppStop")
+
+	m.runningEngine.Stop()
+
+	m.runningEngine = nil
 }
 
 func (m *Manager) Stop() error {
@@ -395,4 +413,92 @@ func (m *Manager) GetAllCalcFn() []string {
 		res = append(res, s)
 	}
 	return res
+}
+
+func (m *Manager) OpenSerialPort() error {
+	return GlobalSerial.OpenSerial()
+}
+
+func (m *Manager) CloseSerialPort() error {
+	return GlobalSerial.CloseSerial()
+}
+
+func (m *Manager) GetAllCanvasName() []string {
+	return m.canvasFileNames
+}
+
+// 从画布模式启动的App
+func (m *Manager) StartCanvasApp(appName string) error {
+
+	if GlobalSerial.port == nil {
+		return ErrSerialNotOpen
+	}
+
+	if err := m.LoadApp(appName); err != nil {
+		return err
+	}
+
+	engine := NewActionEngine(m.nowApp, m.ctx, m.canvasStopCB)
+
+	if err := engine.PreCompile(); err != nil {
+		return err
+	}
+
+	m.runningEngine = engine
+
+	engine.StartAsync()
+
+	return nil
+}
+
+func (m *Manager) LoadCanvas(canvasName string) error {
+
+	return nil
+}
+
+func (m *Manager) SaveCanvasName() error {
+	return nil
+}
+
+func (m *Manager) SaveCanvasData() error {
+	return nil
+}
+
+func (m *Manager) CreateCanvas(canvasConfig CanvasConfigBase) error {
+	canvasName := canvasConfig.CanvasName + ".json"
+
+	var loadCanvasName string
+	for _, c := range m.canvasFileNames {
+		if c == canvasName {
+			loadCanvasName = c
+			break
+		}
+	}
+	if loadCanvasName != "" {
+		return ErrCanvasExist
+	}
+
+	basicJson, err := json.Marshal(&canvasConfig)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(filepath.Join(m.canvasFolder, canvasName))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(basicJson)
+	if err != nil {
+		return err
+	}
+
+	m.canvasFileNames = append(m.canvasFileNames, canvasName)
+
+	return nil
+}
+
+func (m *Manager) DeleteCanvas(canvasName string) error {
+	return nil
 }
