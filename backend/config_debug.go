@@ -22,6 +22,15 @@ func (d *DelayActionFeatureField) ToAction() IAction {
 	return &DelayAction{*d}
 }
 
+type ShowActionFeatureField struct {
+	OutputID int    `json:"OutputID"`
+	FmtStr   string `json:"FmtStr"`
+}
+
+func (s *ShowActionFeatureField) ToAction() IAction {
+	return &ShowAction{*s}
+}
+
 func unmarshalDebugAction(actionTypeID types.ActionTypeID, b []byte) (any, error) {
 	switch actionTypeID {
 	case types.PrintAT:
@@ -36,6 +45,12 @@ func unmarshalDebugAction(actionTypeID types.ActionTypeID, b []byte) (any, error
 			return nil, err
 		}
 		return &d, nil
+	case types.ShowAT:
+		var s ShowActionFeatureField
+		if err := json.Unmarshal(b, &s); err != nil {
+			return nil, err
+		}
+		return &s, nil
 	default:
 		return nil, errors.New("unsupport action")
 	}

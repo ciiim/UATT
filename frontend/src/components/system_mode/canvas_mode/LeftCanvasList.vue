@@ -61,7 +61,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons-vue";
-import { GetAllAppName, LoadCanvas, CreateCanvas, DeleteCanvas } from "../../../../wailsjs/go/bsd_testtool/Manager";
+import { GetAllAppName, LoadCanvas, CreateCanvas, DeleteCanvas, GetAllCanvasName } from "../../../../wailsjs/go/bsd_testtool/Manager";
 import { message } from "ant-design-vue";
 import { useActionStore } from "../../../stores/action_store";
 import { bsd_testtool } from "../../../../wailsjs/go/models";
@@ -73,6 +73,7 @@ const store = useActionStore();
 // 加载应用列表
 const loadCanvasList = async () => {
   try {
+    canvasList.value = await GetAllCanvasName();
   } catch (err) {
     message.error("加载应用列表失败");
   }
@@ -87,21 +88,22 @@ onMounted(() => {
   loadCanvasList();
 });
 
-const selectCanvas = async (app: string) => {
-  if (app == selectedCanvas.value) {
+const selectCanvas = async (canvas: string) => {
+  if (canvas == selectedCanvas.value) {
     return;
   }
-  selectedCanvas.value = app;
-  store.nowApp = app;
-  store.selectedAction = undefined;
+
   try {
     // message.loading('加载中')
-    // await LoadApp(app);
+    await LoadCanvas(canvas);
     message.info("加载完毕", 1);
+
+    selectedCanvas.value = canvas;
+    store.nowCanvas = canvas;
 
     emit("canvas-loaded");
   } catch (err) {
-    message.error("加载 " + app + " 失败");
+    message.error("加载 " + canvas + " 失败");
   }
 };
 
@@ -112,7 +114,7 @@ const addCanvas = () => {
 };
 
 // 表单数据
-const formData = ref(new bsd_testtool.CanvasConfigBase({
+const formData = ref(new bsd_testtool.CanvasConfig({
   CanvasName: ''
 }));
 
@@ -121,6 +123,7 @@ const handleAddCanvas = async () => {
   try {
     await CreateCanvas(formData.value);
     message.success("新增画布成功");
+    addModalVisible.value = false;
     loadCanvasList();
   } catch (err) {
     console.error(err);
@@ -128,8 +131,8 @@ const handleAddCanvas = async () => {
   }
 };
 const deleteCanvas = async (canvas: string) => {
-  message.success(`已删除：${canvas}`);
   await DeleteCanvas(canvas)
+  message.success(`已删除：${canvas}`);
   canvasList.value = canvasList.value.filter((a) => a !== canvas);
 };
 </script>

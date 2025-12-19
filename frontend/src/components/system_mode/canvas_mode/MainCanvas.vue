@@ -24,12 +24,12 @@
       <!-- SVG 连线层 -->
       <svg class="connection-layer" :width="canvasSize.width" :height="canvasSize.height">
         <line
-          v-for="conn in connections"
-          :key="`${conn.from}-${conn.to}`"
-          :x1="getComponentCenter(conn.from).x"
-          :y1="getComponentCenter(conn.from).y"
-          :x2="getComponentCenter(conn.to).x"
-          :y2="getComponentCenter(conn.to).y"
+          v-for="conn in store.canvasConnections"
+          :key="`${conn.FromID}-${conn.ToID}`"
+          :x1="getComponentCenter(conn.FromID).x"
+          :y1="getComponentCenter(conn.FromID).y"
+          :x2="getComponentCenter(conn.ToID).x"
+          :y2="getComponentCenter(conn.ToID).y"
           stroke="#1890ff"
           stroke-width="2"
           marker-end="url(#arrowhead)"
@@ -45,23 +45,23 @@
 
       <!-- 组件层 -->
       <div
-        v-for="comp in components"
-        :key="comp.id"
+        v-for="comp in store.canvasComponents"
+        :key="comp.ID"
         class="widget"
         :class="{ 
-          'widget-selected': selectedComponentId === comp.id,
-          'widget-button': comp.type === 'button',
-          'widget-text': comp.type === 'text'
+          'widget-selected': selectedComponentId === comp.ID,
+          'widget-button': comp.Type === 'button',
+          'widget-text': comp.Type === 'text'
         }"
-        :style="{ left: comp.position.x + 'px', top: comp.position.y + 'px' }"
+        :style="{ left: comp.Position.X + 'px', top: comp.Position.Y + 'px' }"
         @mousedown="startDrag(comp, $event)"
         @contextmenu="showContextMenu($event, comp)"
         @click.stop="selectComponent(comp)"
         @dblclick="handleDoubleClick(comp)"
       >
-        {{ comp.label }}
-        <div v-if="comp.type === 'text' && comp.value" class="text-output">
-          {{ comp.value }}
+        {{ comp.Label }}
+        <div v-if="comp.Type === 'text' && comp.Value" class="text-output">
+          {{ comp.Value }}
         </div>
       </div>
 
@@ -78,13 +78,13 @@
           </a-menu-item>
           
           <!-- 按钮特有的关联选项 -->
-<template v-if="contextMenu.targetComponent?.type === 'button'">
+<template v-if="contextMenu.targetComponent?.Type === 'button'">
   <a-menu-item key="connect-action" @click="showActionDialog">
     <SettingOutlined />
     关联到Action
   </a-menu-item>
   <a-menu-item 
-    v-if="getButtonConnections(contextMenu.targetComponent.id).length > 0"
+    v-if="getButtonConnections(contextMenu.targetComponent.ID).length > 0"
     key="disconnect" 
     @click="showDisconnectDialog"
   >
@@ -94,13 +94,13 @@
 </template>
 
 <!-- 文字框特有的关联选项 -->
-<template v-if="contextMenu.targetComponent?.type === 'text'">
+<template v-if="contextMenu.targetComponent?.Type === 'text'">
   <a-menu-item key="connect" @click="showConnectDialog">
     <LinkOutlined />
     关联到按钮
   </a-menu-item>
   <a-menu-item 
-    v-if="getTextConnections(contextMenu.targetComponent.id).length > 0"
+    v-if="getTextConnections(contextMenu.targetComponent.ID).length > 0"
     key="disconnect" 
     @click="showDisconnectDialog"
   >
@@ -172,10 +172,10 @@
           <a-select v-model:value="connectForm.targetId" placeholder="请选择按钮">
             <a-select-option 
               v-for="buttonComp in buttonComponents"
-              :key="buttonComp.id"
-              :value="buttonComp.id"
+              :key="buttonComp.ID"
+              :value="buttonComp.ID"
             >
-              {{ buttonComp.label }}
+              {{ buttonComp.Label }}
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -194,8 +194,8 @@
           <a-select v-model:value="disconnectForm.connectionId" placeholder="请选择要解除的关联">
             <a-select-option 
               v-for="conn in currentConnections"
-              :key="`${conn.from}-${conn.to}`"
-              :value="`${conn.from}-${conn.to}`"
+              :key="`${conn.FromID}-${conn.ToID}`"
+              :value="`${conn.FromID}-${conn.ToID}`"
             >
               {{ getConnectionLabel(conn) }}
             </a-select-option>
@@ -207,41 +207,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Modal, message } from 'ant-design-vue';
 import { EditOutlined, DeleteOutlined, LinkOutlined, DisconnectOutlined } from '@ant-design/icons-vue';
-import { GetAllAppName } from '../../../../wailsjs/go/bsd_testtool/Manager';
+import { GetAllAppName, GetCanvasData, StartCanvasApp } from '../../../../wailsjs/go/bsd_testtool/Manager';
+import { CanvasComponent, Connection } from '../../../types/Canvas';
+import { useActionStore } from "../../../stores/action_store";
 
-interface CanvasComponent {
-  id: string;
-  type: string;
-  label: string;
-  position: { x: number; y: number };
-  value?: string; // 文字框的输出值
-  app?: string; // 按钮的操作类型
-}
+const store = useActionStore();
 
 interface LibraryItem {
   type: string;
   label: string;
 }
 
-interface Connection {
-  from: string; // 按钮ID
-  to: string;   // 文字框ID
-}
+const prop = defineProps<{
+  needGetCanvasList: boolean;
+}>();
+
+
+watch(
+  () => prop.needGetCanvasList,
+  () => {
+    GetCanvasData()
+      .then((res) => {
+        console.log(res);
+        store.canvasComponents = res.Data.ComponentList
+        store.canvasConnections = res.Data.Connections
+      })
+      .catch((err) => {
+        console.log("错误 " + err);
+      });
+  }
+);
+
 
 // 组件库
 const widgetLibrary = ref<LibraryItem[]>([
   { type: 'button', label: '按钮' },
   { type: 'text', label: '文字框' },
 ]);
-
-// 画布上的组件
-const components = ref<CanvasComponent[]>([]);
-
-// 连接关系
-const connections = ref<Connection[]>([]);
 
 // 画布尺寸
 const canvasSize = reactive({ width: 800, height: 600 });
@@ -293,48 +298,48 @@ const disconnectForm = reactive({
 
 // 计算属性：获取所有按钮组件
 const buttonComponents = computed(() => 
-  components.value.filter(c => c.type === 'button')
+  store.canvasComponents.filter(c => c.Type === 'button')
 );
 
 // 计算属性：当前组件的关联关系
 const currentConnections = computed(() => {
   if (!contextMenu.targetComponent) return [];
   
-  const compId = contextMenu.targetComponent.id;
-  if (contextMenu.targetComponent.type === 'button') {
-    return connections.value.filter(c => c.from === compId);
-  } else if (contextMenu.targetComponent.type === 'text') {
-    return connections.value.filter(c => c.to === compId);
+  const compId = contextMenu.targetComponent.ID;
+  if (contextMenu.targetComponent.Type === 'button') {
+    return store.canvasConnections.filter(c => c.FromID === compId);
+  } else if (contextMenu.targetComponent.Type === 'text') {
+    return store.canvasConnections.filter(c => c.ToID === compId);
   }
   return [];
 });
 
 // 获取组件中心点坐标
 const getComponentCenter = (componentId: string) => {
-  const comp = components.value.find(c => c.id === componentId);
+  const comp =  store.canvasComponents.find(c => c.ID === componentId);
   if (!comp) return { x: 0, y: 0 };
   
   return {
-    x: comp.position.x + 50, // 组件宽度的一半
-    y: comp.position.y + 20  // 组件高度的一半
+    x: comp.Position.X + 50, // 组件宽度的一半
+    y: comp.Position.Y + 20  // 组件高度的一半
   };
 };
 
 // 获取按钮的关联关系
 const getButtonConnections = (buttonId: string) => {
-  return connections.value.filter(c => c.from === buttonId);
+  return store.canvasConnections.filter(c => c.FromID === buttonId);
 };
 
 // 获取文字框的关联关系
 const getTextConnections = (textId: string) => {
-  return connections.value.filter(c => c.to === textId);
+  return store.canvasConnections.filter(c => c.ToID === textId);
 };
 
 // 获取关联关系的显示标签
 const getConnectionLabel = (conn: Connection) => {
-  const fromComp = components.value.find(c => c.id === conn.from);
-  const toComp = components.value.find(c => c.id === conn.to);
-  return `${fromComp?.label || '未知'} → ${toComp?.label || '未知'}`;
+  const fromComp =  store.canvasComponents.find(c => c.ID === conn.FromID);
+  const toComp =  store.canvasComponents.find(c => c.ID === conn.ToID);
+  return `${fromComp?.Label || '未知'} → ${toComp?.Label || '未知'}`;
 };
 
 // 更新画布尺寸
@@ -356,26 +361,26 @@ const onDrop = (e: DragEvent) => {
   const canvasBounds = (canvasRef.value as HTMLDivElement).getBoundingClientRect();
 
   const newComp: CanvasComponent = {
-    id: `${dragData.value.type}_${Date.now()}`,
-    type: dragData.value.type,
-    label: dragData.value.label,
-    position: {
-      x: e.clientX - canvasBounds.left - 40,
-      y: e.clientY - canvasBounds.top - 20
+    ID: `${dragData.value.type}_${Date.now()}`,
+    Type: dragData.value.type,
+    Label: dragData.value.label,
+    Position: {
+      X: e.clientX - canvasBounds.left - 40,
+      Y: e.clientY - canvasBounds.top - 20
     }
   };
 
-  console.log('id:' +newComp.id);
+  console.log('id:' +newComp.ID);
   
 
   // 为文字框初始化 value，为按钮初始化 action
-  if (newComp.type === 'text') {
-    newComp.value = '';
-  } else if (newComp.type === 'button') {
-    newComp.app = 'default';
+  if (newComp.Type === 'text') {
+    newComp.Value = '';
+  } else if (newComp.Type === 'button') {
+    newComp.AttachApp = 'default';
   }
 
-  components.value.push(newComp);
+   store.canvasComponents.push(newComp);
   dragData.value = null;
 };
 
@@ -388,16 +393,16 @@ const startDrag = (comp: CanvasComponent, e: MouseEvent) => {
   if (e.button === 2) return;
   
   draggingComp.value = comp;
-  offsetX = e.clientX - comp.position.x;
-  offsetY = e.clientY - comp.position.y;
+  offsetX = e.clientX - comp.Position.X;
+  offsetY = e.clientY - comp.Position.Y;
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', stopDrag);
 };
 
 const onMouseMove = (e: MouseEvent) => {
   if (draggingComp.value) {
-    draggingComp.value.position.x = e.clientX - offsetX;
-    draggingComp.value.position.y = e.clientY - offsetY;
+    draggingComp.value.Position.X = e.clientX - offsetX;
+    draggingComp.value.Position.Y = e.clientY - offsetY;
   }
 };
 
@@ -409,23 +414,27 @@ const stopDrag = () => {
 
 // 选中组件
 const selectComponent = (comp: CanvasComponent) => {
-  selectedComponentId.value = comp.id;
+  selectedComponentId.value = comp.ID;
 };
 
 // 双击处理（按钮执行操作）
 const handleDoubleClick = (comp: CanvasComponent) => {
-  if (comp.type === 'button') {
+  if (comp.Type === 'button') {
     executeButtonApp(comp);
   }
 };
 
 // ===== 这里是留给你实现的按钮Action接口 =====
-const executeButtonApp = (buttonComp: CanvasComponent) => {
+const executeButtonApp = async (buttonComp: CanvasComponent) => {
 
-  const result = performApp(buttonComp.app || 'default');
-  updateConnectedTextBoxes(buttonComp.id, result);
+  const result = performApp(buttonComp.AttachApp || 'default');
+  updateConnectedTextBoxes(buttonComp.ID, result);
   
-  console.log('按钮执行:', buttonComp.label, '操作类型:', buttonComp.app);
+  console.log('按钮执行:', buttonComp.Label, '操作类型:', buttonComp.AttachApp);
+
+  StartCanvasApp(buttonComp.AttachApp!).catch((err)=> {
+    message.error(["执行失败", err], 1)
+  })
 };
 
 // 示例：执行具体操作（你可以替换这个函数）
@@ -444,11 +453,11 @@ const performApp = (app: string): string => {
 
 // 更新关联的文字框
 const updateConnectedTextBoxes = (buttonId: string, result: string) => {
-  const relatedConnections = connections.value.filter(c => c.from === buttonId);
+  const relatedConnections = store.canvasConnections.filter(c => c.FromID === buttonId);
   relatedConnections.forEach(conn => {
-    const textComp = components.value.find(c => c.id === conn.to);
+    const textComp = store.canvasComponents.find(c => c.ID === conn.ToID);
     if (textComp) {
-      textComp.value = result;
+      textComp.Value = result;
     }
   });
 };
@@ -459,11 +468,10 @@ const updateConnectedTextBoxes = (buttonId: string, result: string) => {
 const showActionDialog = async () => {
   if (!contextMenu.targetComponent) return;
   
-  // 🔥 这里调用你的函数获取Action列表
   try {
     availableActions.value = await GetAllAppName();
-    appForm.buttonId = contextMenu.targetComponent.id;
-    appForm.selectedApp = contextMenu.targetComponent.app || '';
+    appForm.buttonId = contextMenu.targetComponent.ID;
+    appForm.selectedApp = contextMenu.targetComponent.AttachApp || '';
     appModalVisible.value = true;
     hideContextMenu();
   } catch (error) {
@@ -478,9 +486,9 @@ const saveAction = () => {
     return;
   }
 
-  const targetButton = components.value.find(c => c.id === appForm.buttonId);
+  const targetButton = store.canvasComponents.find(c => c.ID === appForm.buttonId);
   if (targetButton) {
-    targetButton.app = appForm.selectedApp;
+    targetButton.AttachApp = appForm.selectedApp;
     message.success('App关联成功');
   }
   
@@ -503,7 +511,7 @@ const showContextMenu = (e: MouseEvent, comp: CanvasComponent) => {
   contextMenu.x = e.pageX;
   contextMenu.y = e.pageY;
   contextMenu.targetComponent = comp;
-  selectedComponentId.value = comp.id;
+  selectedComponentId.value = comp.ID;
   console.log(comp);
   
 };
@@ -520,7 +528,7 @@ const showConnectDialog = () => {
     return;
   }
   connectForm.targetId = '';
-  connectForm.myselfId = contextMenu.targetComponent!.id;
+  connectForm.myselfId = contextMenu.targetComponent!.ID;
   connectModalVisible.value = true;
   hideContextMenu();
 };
@@ -532,13 +540,13 @@ const saveConnection = () => {
   }
 
   const newConnection: Connection = {
-    from: connectForm.targetId,  // 现在是按钮ID
-    to: connectForm.myselfId  // 现在是文字框ID
+    FromID: connectForm.targetId,  // 现在是按钮ID
+    ToID: connectForm.myselfId  // 现在是文字框ID
   };
 
   // 检查是否已经存在相同的关联
-  const exists = connections.value.some(
-    c => c.from === newConnection.from && c.to === newConnection.to
+  const exists = store.canvasConnections.some(
+    c => c.FromID === newConnection.FromID && c.ToID === newConnection.ToID
   );
 
   if (exists) {
@@ -546,7 +554,7 @@ const saveConnection = () => {
     return;
   }
 
-  connections.value.push(newConnection);
+  store.canvasConnections.push(newConnection);
   message.success('关联创建成功');
   connectModalVisible.value = false;
 };
@@ -574,12 +582,12 @@ const saveDisconnection = () => {
   
 
   const [fromId, toId] = disconnectForm.connectionId.split('-');
-  const index = connections.value.findIndex(
-    c => c.from === fromId && c.to === toId
+  const index = store.canvasConnections.findIndex(
+    c => c.FromID === fromId && c.ToID === toId
   );
 
   if (index > -1) {
-    connections.value.splice(index, 1);
+    store.canvasConnections.splice(index, 1);
     message.success('关联解除成功');
   }
 
@@ -602,17 +610,17 @@ const deleteComponent = () => {
     cancelText: '取消',
     onOk() {
 
-      const compId = targetComponent!.id;
+      const compId = targetComponent!.ID;
       
       // 删除组件
-      const index = components.value.findIndex(c => c.id === compId);
+      const index = store.canvasComponents.findIndex(c => c.ID === compId);
       if (index > -1) {
-        components.value.splice(index, 1);
+        store.canvasComponents.splice(index, 1);
       }
 
       // 删除相关的连接关系
-      connections.value = connections.value.filter(
-        c => c.from !== compId && c.to !== compId
+      store.canvasConnections = store.canvasConnections.filter(
+        c => c.FromID !== compId && c.ToID !== compId
       );
 
       if (selectedComponentId.value === compId) {
@@ -629,9 +637,9 @@ const deleteComponent = () => {
 const editComponent = () => {
   if (!contextMenu.targetComponent) return;
   
-  editForm.label = contextMenu.targetComponent.label;
-  editForm.type = contextMenu.targetComponent.type;
-  editForm.id = contextMenu.targetComponent.id;
+  editForm.label = contextMenu.targetComponent.Label;
+  editForm.type = contextMenu.targetComponent.Type;
+  editForm.id = contextMenu.targetComponent.ID;
   editModalVisible.value = true;
   hideContextMenu();
 };
@@ -640,13 +648,13 @@ const editComponent = () => {
 const saveEdit = () => {
   if (!editForm.id) return;
   
-  const targetComp = components.value.find(
-    c => c.id === editForm.id
+  const targetComp = store.canvasComponents.find(
+    c => c.ID === editForm.id
   );
   if (targetComp) {
-    targetComp.label = editForm.label;
-    targetComp.type = editForm.type;
-    targetComp.id = editForm.id;
+    targetComp.Label = editForm.label;
+    targetComp.Type = editForm.type;
+    targetComp.ID = editForm.id;
     message.success('组件编辑成功');
   }
   editModalVisible.value = false;

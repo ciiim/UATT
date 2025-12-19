@@ -17,7 +17,7 @@ func main() {
 	// Create an instance of the app structure
 	manager := &bsd_testtool.GlobalManager
 
-	if err := manager.Init(""); err != nil {
+	if err := manager.Init("", ""); err != nil {
 		fmt.Printf("manager init error: %s\n", err.Error())
 	}
 

@@ -8,14 +8,14 @@ import (
 )
 
 func TestManagerInit(t *testing.T) {
-	bsd_testtool.GlobalManager.Init("./Apps")
+	bsd_testtool.GlobalManager.Init("./Apps", "./Canvas")
 	if err := bsd_testtool.GlobalManager.LoadApp("app-111.json"); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestSaveApp(t *testing.T) {
-	bsd_testtool.GlobalManager.Init("./Apps")
+	bsd_testtool.GlobalManager.Init("./Apps", "./Canvas")
 	if err := bsd_testtool.GlobalManager.LoadApp("app-111.json"); err != nil {
 		t.Error(err)
 	}
@@ -25,7 +25,7 @@ func TestSaveApp(t *testing.T) {
 }
 
 func TestManagerLoadConfig(t *testing.T) {
-	bsd_testtool.GlobalManager.Init("./Apps")
+	bsd_testtool.GlobalManager.Init("./Apps", "./Canvas")
 	err := bsd_testtool.GlobalManager.LoadApp("app-111.json")
 	t.Log(err)
 	app := bsd_testtool.GlobalManager.GetNowApp()

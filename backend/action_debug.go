@@ -12,6 +12,10 @@ type DelayAction struct {
 	DelayActionFeatureField
 }
 
+type ShowAction struct {
+	ShowActionFeatureField
+}
+
 func (p *PrintAction) doAction(ctx *ActionContext) error {
 	printFmt := p.PrintString
 
@@ -38,5 +42,9 @@ func (d *DelayAction) doAction(ctx *ActionContext) error {
 
 	ctx.DefaultNextAction()
 
+	return nil
+}
+
+func (s *ShowAction) doAction(ctx *ActionContext) error {
 	return nil
 }

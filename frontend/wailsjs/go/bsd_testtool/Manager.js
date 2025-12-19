@@ -38,6 +38,10 @@ export function GetAllCalcFn() {
   return window['go']['bsd_testtool']['Manager']['GetAllCalcFn']();
 }
 
+export function GetAllCanvasName() {
+  return window['go']['bsd_testtool']['Manager']['GetAllCanvasName']();
+}
+
 export function GetAllSerial() {
   return window['go']['bsd_testtool']['Manager']['GetAllSerial']();
 }
@@ -46,12 +50,24 @@ export function GetAppSettings() {
   return window['go']['bsd_testtool']['Manager']['GetAppSettings']();
 }
 
+export function GetCanvasData() {
+  return window['go']['bsd_testtool']['Manager']['GetCanvasData']();
+}
+
 export function GetNowApp() {
   return window['go']['bsd_testtool']['Manager']['GetNowApp']();
 }
 
-export function Init(arg1) {
-  return window['go']['bsd_testtool']['Manager']['Init'](arg1);
+export function Init(arg1, arg2) {
+  return window['go']['bsd_testtool']['Manager']['Init'](arg1, arg2);
+}
+
+export function InitReadApps(arg1) {
+  return window['go']['bsd_testtool']['Manager']['InitReadApps'](arg1);
+}
+
+export function InitReadCanvas(arg1) {
+  return window['go']['bsd_testtool']['Manager']['InitReadCanvas'](arg1);
 }
 
 export function LoadApp(arg1) {
@@ -70,8 +86,8 @@ export function SaveApp() {
   return window['go']['bsd_testtool']['Manager']['SaveApp']();
 }
 
-export function SaveCanvas() {
-  return window['go']['bsd_testtool']['Manager']['SaveCanvas']();
+export function SaveCanvas(arg1) {
+  return window['go']['bsd_testtool']['Manager']['SaveCanvas'](arg1);
 }
 
 export function SelectSerialCom(arg1) {

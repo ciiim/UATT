@@ -28,7 +28,8 @@ Control 类模块
 ---
 Debug 类模块
     1. Print模块 [ActionTypeID 90]
-    1. Delay模块 [ActionTypeID 91]
+    2. Delay模块 [ActionTypeID 91]
+    3. Show模块  [ActionTypeID 92]
 
 
 format定义

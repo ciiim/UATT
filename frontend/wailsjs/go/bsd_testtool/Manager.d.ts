@@ -6,7 +6,7 @@ export function CloseSerialPort():Promise<void>;
 
 export function CreateApp(arg1:bsd_testtool.AppConfigSettings):Promise<void>;
 
-export function CreateCanvas(arg1:string):Promise<void>;
+export function CreateCanvas(arg1:bsd_testtool.CanvasConfig):Promise<void>;
 
 export function DeleteApp(arg1:string):Promise<void>;
 
@@ -20,13 +20,21 @@ export function GetAllAppName():Promise<Array<string>>;
 
 export function GetAllCalcFn():Promise<Array<string>>;
 
+export function GetAllCanvasName():Promise<Array<string>>;
+
 export function GetAllSerial():Promise<Array<string>>;
 
 export function GetAppSettings():Promise<bsd_testtool.AppConfigSettings>;
 
+export function GetCanvasData():Promise<bsd_testtool.CanvasConfig>;
+
 export function GetNowApp():Promise<bsd_testtool.App>;
 
-export function Init(arg1:string):Promise<void>;
+export function Init(arg1:string,arg2:string):Promise<void>;
+
+export function InitReadApps(arg1:string):Promise<void>;
+
+export function InitReadCanvas(arg1:string):Promise<void>;
 
 export function LoadApp(arg1:string):Promise<void>;
 
@@ -36,7 +44,7 @@ export function OpenSerialPort():Promise<void>;
 
 export function SaveApp():Promise<void>;
 
-export function SaveCanvas():Promise<void>;
+export function SaveCanvas(arg1:bsd_testtool.CanvasConfig):Promise<void>;
 
 export function SelectSerialCom(arg1:string):Promise<void>;
 

@@ -95,11 +95,14 @@ import {
   SyncAppSettings,
   SaveApp,
   SyncActions,
+  OpenSerialPort,
+  SaveCanvas,
+  CloseSerialPort,
 } from "../../../../wailsjs/go/bsd_testtool/Manager";
 import { bsd_testtool } from "../../../../wailsjs/go/models";
 import { EventsOn } from "../../../../wailsjs/runtime/runtime"
 
-const actionStore = useActionStore();
+const store = useActionStore();
 
 // 弹窗控制
 const addModalVisible = ref(false);
@@ -142,8 +145,7 @@ const GetSerialList = async ()=> {
 const onSelectSerial = async (port: string) => {
   try {
     console.log('select');
-    
-    await SelectSerialCom(port);
+    await SelectSerialCom(port)
     //message.success(`已选择串口: ${port}`);
   } catch (err) {
     console.error(err);
@@ -154,8 +156,8 @@ const onSelectSerial = async (port: string) => {
 const openSerialPort = async () => {
   try {
     await onSave()
-    actionStore.nowRightSiderTabIndex = 2;
-    await Start()
+    store.nowRightSiderTabIndex = 2;
+    await OpenSerialPort()
     nowRunningStatus.value = 1
   } catch(err) {
     message.error('运行失败:' + err)
@@ -165,7 +167,7 @@ const openSerialPort = async () => {
 
 const closeSerialPort = async () => {
   nowRunningStatus.value = 2
-  await Stop()
+  await CloseSerialPort()
   nowRunningStatus.value = 0
 }
 
@@ -194,15 +196,17 @@ const handleAddApp = async () => {
 
 const onSave = async () => {
   try {
-    console.log("actions:", actionStore.actions);
-    // 调用 wails 后端保存
-    await SyncActions(actionStore.actions);
-    console.log("step 1");
-    
-    
-    await SaveApp();
+    let canvasCfg = new bsd_testtool.CanvasConfig({
+        CanvasName: store.nowCanvas,
+        Data: new bsd_testtool.CanvasData({
+          ComponentList: store.canvasComponents,
+          Connections: store.canvasConnections,
+        }), 
+      })
+      
+      await SaveCanvas(canvasCfg)
+      message.success("保存成功", 1);
 
-    message.success("保存成功", 1);
   } catch (err) {
     console.error(err);
     message.error("保存失败");

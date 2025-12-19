@@ -19,6 +19,7 @@ const (
 const (
 	PrintAT ActionTypeID = 90
 	DelayAT ActionTypeID = 91
+	ShowAT  ActionTypeID = 92
 
 	SendAT    ActionTypeID = 1
 	ReceiveAT ActionTypeID = 2

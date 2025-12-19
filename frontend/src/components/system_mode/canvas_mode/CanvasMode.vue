@@ -48,8 +48,13 @@ import {
   FundProjectionScreenOutlined,
 } from "@ant-design/icons-vue";
 import { message } from "ant-design-vue";
+import { SaveCanvas } from "../../../../wailsjs/go/bsd_testtool/Manager";
+import { useActionStore } from "../../../stores/action_store";
+import { bsd_testtool } from "../../../../wailsjs/go/models";
 
 defineProps<{rightSiderWidth : number}>();
+
+const store = useActionStore();
 
 const headerStyle: CSSProperties = {
   display: "flex",
@@ -79,6 +84,16 @@ const handleKeyDown = async (e: KeyboardEvent) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault(); // 阻止浏览器保存网页
     try {
+      
+      let canvasCfg = new bsd_testtool.CanvasConfig({
+        CanvasName: store.nowCanvas,
+        Data: new bsd_testtool.CanvasData({
+          ComponentList: store.canvasComponents,
+          Connections: store.canvasConnections,
+        }), 
+      })
+      
+      await SaveCanvas(canvasCfg)
       message.success("保存成功", 1);
     } catch (err) {
       if (err != "could not found app") {
@@ -89,13 +104,20 @@ const handleKeyDown = async (e: KeyboardEvent) => {
 };
 
 const leftCollapsed = ref<boolean>(false);
-const rightCollapsed = ref<boolean>(false);
 
 const needGetCanvas = ref<boolean>(false);
 
 const notifyGetCanvasContent = () => {
   needGetCanvas.value = !needGetCanvas.value
 }
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeyDown);
+});
 
 const canvasToolLibrary = ref([
 ])

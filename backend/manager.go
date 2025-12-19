@@ -30,12 +30,14 @@ type Manager struct {
 
 	canvasFolder    string
 	canvasFileNames []string
-	nowCanvasName   string
+	nowCanvas       *CanvasConfig
 }
 
 var ErrNotFoundApp error = errors.New("could not found app")
 var ErrAppExist error = errors.New("app exist")
 var ErrCanvasExist error = errors.New("canvas exist")
+var ErrCanvasNotExist error = errors.New("canvas not exist")
+var ErrNoCanvasLoaded error = errors.New("no canvas loaded")
 
 var GlobalManager Manager
 
@@ -44,7 +46,7 @@ func (m *Manager) Startup(ctx context.Context) {
 	m.ctx = ctx
 }
 
-func (m *Manager) Init(appFolder string) error {
+func (m *Manager) InitReadApps(appFolder string) error {
 	if appFolder == "" {
 		appFolder = "./Apps"
 	}
@@ -81,6 +83,57 @@ func (m *Manager) Init(appFolder string) error {
 
 	m.appFolder = appFolder
 
+	return nil
+}
+
+func (m *Manager) InitReadCanvas(canvasFolder string) error {
+	if canvasFolder == "" {
+		canvasFolder = "./Canvas"
+	}
+	_, err := os.Stat(canvasFolder)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			if err = os.Mkdir(canvasFolder, os.ModeDir); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	folder, err := os.Open(canvasFolder)
+	if err != nil {
+		return err
+	}
+	defer folder.Close()
+
+	entry, err := folder.ReadDir(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range entry {
+		if e.IsDir() {
+			continue
+		}
+		if strings.Contains(e.Name(), ".json") {
+			m.canvasFileNames = append(m.canvasFileNames, e.Name())
+		}
+	}
+
+	m.canvasFolder = canvasFolder
+
+	return nil
+}
+
+func (m *Manager) Init(appFolder, canvasFolder string) error {
+	if err := m.InitReadApps(appFolder); err != nil {
+		return err
+	}
+
+	if err := m.InitReadCanvas(canvasFolder); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -424,6 +477,7 @@ func (m *Manager) CloseSerialPort() error {
 }
 
 func (m *Manager) GetAllCanvasName() []string {
+	fmt.Printf("m.canvasFileNames: %v\n", m.canvasFileNames)
 	return m.canvasFileNames
 }
 
@@ -452,20 +506,81 @@ func (m *Manager) StartCanvasApp(appName string) error {
 }
 
 func (m *Manager) LoadCanvas(canvasName string) error {
+	var loadCanvasName string
+	for _, c := range m.canvasFileNames {
+		if c == canvasName {
+			loadCanvasName = c
+			break
+		}
+	}
+	if loadCanvasName == "" {
+		return ErrCanvasNotExist
+	}
+
+	canvasFile, err := os.Open(filepath.Join(m.canvasFolder, loadCanvasName))
+	if err != nil {
+		return err
+	}
+	defer canvasFile.Close()
+
+	fileStat, err := canvasFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	canvasCfgBuffer := make([]byte, fileStat.Size())
+
+	_, err = canvasFile.Read(canvasCfgBuffer)
+	if err != nil {
+		return err
+	}
+
+	var canvasCfg CanvasConfig
+
+	if err := json.Unmarshal(canvasCfgBuffer, &canvasCfg); err != nil {
+		return err
+	}
+
+	m.nowCanvas = &canvasCfg
 
 	return nil
 }
 
-func (m *Manager) SaveCanvasName() error {
+func (m *Manager) GetCanvasData() (CanvasConfig, error) {
+	if m.nowCanvas == nil {
+		return CanvasConfig{}, ErrNoCanvasLoaded
+	}
+
+	return *m.nowCanvas, nil
+}
+
+func (m *Manager) SaveCanvas(cfg CanvasConfig) error {
+	if m.nowCanvas == nil {
+		return ErrNoCanvasLoaded
+	}
+
+	fmt.Printf("save compo list: %v, compo connections:%v\n", cfg.Data.ComponentList, cfg.Data.Connections)
+
+	canvasFile, err := os.Create(filepath.Join(m.canvasFolder, m.nowCanvas.CanvasFileName))
+	if err != nil {
+		return err
+	}
+	defer canvasFile.Close()
+
+	cfgJsonBytes, err := json.Marshal(&cfg)
+	if err != nil {
+		return err
+	}
+
+	if _, err := canvasFile.Write(cfgJsonBytes); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (m *Manager) SaveCanvasData() error {
-	return nil
-}
-
-func (m *Manager) CreateCanvas(canvasConfig CanvasConfigBase) error {
-	canvasName := canvasConfig.CanvasName + ".json"
+func (m *Manager) CreateCanvas(canvasConfig CanvasConfig) error {
+	canvasName := canvasConfig.CanvasFileName + ".json"
 
 	var loadCanvasName string
 	for _, c := range m.canvasFileNames {
@@ -477,6 +592,8 @@ func (m *Manager) CreateCanvas(canvasConfig CanvasConfigBase) error {
 	if loadCanvasName != "" {
 		return ErrCanvasExist
 	}
+
+	canvasConfig.CanvasFileName = canvasName
 
 	basicJson, err := json.Marshal(&canvasConfig)
 	if err != nil {
@@ -500,5 +617,28 @@ func (m *Manager) CreateCanvas(canvasConfig CanvasConfigBase) error {
 }
 
 func (m *Manager) DeleteCanvas(canvasName string) error {
+	var loadCanvasName string
+	for _, a := range m.canvasFileNames {
+		if a == canvasName {
+			loadCanvasName = a
+			break
+		}
+	}
+	if loadCanvasName == "" {
+		return ErrNotFoundApp
+	}
+
+	if m.nowCanvas.CanvasFileName == canvasName {
+		m.nowCanvas = nil
+	}
+
+	if err := os.Remove(filepath.Join(m.canvasFolder, canvasName)); err != nil {
+		return err
+	}
+
+	m.canvasFileNames = slices.DeleteFunc(m.canvasFileNames, func(fileName string) bool {
+		return canvasName == fileName
+	})
+
 	return nil
 }
