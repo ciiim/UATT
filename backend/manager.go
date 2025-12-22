@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"go.bug.st/serial"
 )
@@ -76,9 +75,7 @@ func (m *Manager) InitReadApps(appFolder string) error {
 		if e.IsDir() {
 			continue
 		}
-		if strings.Contains(e.Name(), ".json") {
-			m.appFileNames = append(m.appFileNames, e.Name())
-		}
+		m.appFileNames = append(m.appFileNames, e.Name())
 	}
 
 	m.appFolder = appFolder
@@ -116,9 +113,7 @@ func (m *Manager) InitReadCanvas(canvasFolder string) error {
 		if e.IsDir() {
 			continue
 		}
-		if strings.Contains(e.Name(), ".json") {
-			m.canvasFileNames = append(m.canvasFileNames, e.Name())
-		}
+		m.canvasFileNames = append(m.canvasFileNames, e.Name())
 	}
 
 	m.canvasFolder = canvasFolder
@@ -222,6 +217,8 @@ func (m *Manager) canvasStopCB() {
 	m.runningEngine.Stop()
 
 	m.runningEngine = nil
+
+	m.nowApp = nil
 }
 
 func (m *Manager) Stop() error {
@@ -270,7 +267,7 @@ func (m *Manager) GetActionList() ([]ConfigActionBaseJson, error) {
 
 func (m *Manager) CreateApp(basic AppConfigSettings) error {
 
-	appName := basic.AppName + ".json"
+	appName := basic.AppName
 
 	var loadAppName string
 	for _, a := range m.appFileNames {
@@ -389,6 +386,7 @@ func (m *Manager) SyncAppSettings(settings AppConfigSettings) error {
 
 // 同步前端Actions到后端App的Action链表里
 func (m *Manager) SyncActions(actions []ConfigActionBaseJson) error {
+
 	if m.nowApp == nil {
 		return ErrNotFoundApp
 	}
@@ -403,7 +401,6 @@ func (m *Manager) SyncActions(actions []ConfigActionBaseJson) error {
 }
 
 func (m *Manager) SaveApp() error {
-
 	if m.nowApp == nil {
 		return ErrNotFoundApp
 	}
@@ -484,23 +481,13 @@ func (m *Manager) GetAllCanvasName() []string {
 // 从画布模式启动的App
 func (m *Manager) StartCanvasApp(appName string) error {
 
-	if GlobalSerial.port == nil {
-		return ErrSerialNotOpen
-	}
-
 	if err := m.LoadApp(appName); err != nil {
 		return err
 	}
 
-	engine := NewActionEngine(m.nowApp, m.ctx, m.canvasStopCB)
-
-	if err := engine.PreCompile(); err != nil {
+	if err := m.Start(); err != nil {
 		return err
 	}
-
-	m.runningEngine = engine
-
-	engine.StartAsync()
 
 	return nil
 }
@@ -559,6 +546,8 @@ func (m *Manager) SaveCanvas(cfg CanvasConfig) error {
 		return ErrNoCanvasLoaded
 	}
 
+	m.nowCanvas = &cfg
+
 	fmt.Printf("save compo list: %v, compo connections:%v\n", cfg.Data.ComponentList, cfg.Data.Connections)
 
 	canvasFile, err := os.Create(filepath.Join(m.canvasFolder, m.nowCanvas.CanvasFileName))
@@ -580,7 +569,7 @@ func (m *Manager) SaveCanvas(cfg CanvasConfig) error {
 }
 
 func (m *Manager) CreateCanvas(canvasConfig CanvasConfig) error {
-	canvasName := canvasConfig.CanvasFileName + ".json"
+	canvasName := canvasConfig.CanvasFileName
 
 	var loadCanvasName string
 	for _, c := range m.canvasFileNames {
@@ -641,4 +630,60 @@ func (m *Manager) DeleteCanvas(canvasName string) error {
 	})
 
 	return nil
+}
+
+func (m *Manager) ExportViewer() (int, error) {
+	if m.nowCanvas == nil {
+		return 0, ErrCanvasNotExist
+	}
+
+	//收集跟canvas相关的app
+	appList := make([]*AppConfig, 0)
+
+	for _, comp := range m.nowCanvas.Data.ComponentList {
+		if comp.Type != "button" {
+			continue
+		}
+		// 找到App
+		var loadAppName string
+		for _, c := range m.appFileNames {
+			if c == comp.AttachApp {
+				loadAppName = c
+				break
+			}
+		}
+		if loadAppName == "" {
+			return 0, ErrNotFoundApp
+		}
+
+		appConfigFile, err := os.Open(filepath.Join(m.appFolder, loadAppName))
+		if err != nil {
+			return 0, err
+		}
+		defer appConfigFile.Close()
+
+		appConfigStat, err := appConfigFile.Stat()
+		if err != nil {
+			return 0, err
+		}
+
+		appConfigJson := make([]byte, appConfigStat.Size())
+
+		readBytes, err := appConfigFile.Read(appConfigJson)
+		if err != nil {
+			return 0, err
+		}
+		if readBytes != int(appConfigStat.Size()) {
+			return 0, errors.New("read app config error")
+		}
+
+		appConfig, err := ParseAppConfig(appConfigJson)
+		if err != nil {
+			return 0, err
+		}
+
+		appList = append(appList, appConfig)
+	}
+
+	return len(appList), WriteStorageConfig(m.nowCanvas, appList)
 }

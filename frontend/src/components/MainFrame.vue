@@ -14,11 +14,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { SystemMode } from '../stores/global';
 import EditMode from './system_mode/edit_mode/EditMode.vue';
 import CanvasMode from './system_mode/canvas_mode/CanvasMode.vue';
-
+import CanvasViewMode from './system_mode/view_mode/CanvasViewMode.vue';
 
 const rightSiderWidth = ref(300)
-
-
 
 const updateRightSiderWidth = () => {
   const winWidth = window.innerWidth
@@ -33,7 +31,7 @@ const updateRightSiderWidth = () => {
   }
 }
 
-const nowSystemModeFrame = ref(EditMode)
+const nowSystemModeFrame = ref(CanvasMode)
 
 const changeSystemMode = (mode : SystemMode) => {
 	console.log('switch to:', mode);
@@ -46,6 +44,7 @@ const changeSystemMode = (mode : SystemMode) => {
 			nowSystemModeFrame.value = CanvasMode
 			break
 		case SystemMode.CanvasViewMode:
+			nowSystemModeFrame.value = CanvasViewMode
 			break
 	}
 }

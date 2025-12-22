@@ -34,11 +34,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 
 import { GetActionList } from "../../../../wailsjs/go/bsd_testtool/Manager";
 
-import { EventsOn } from "../../../../wailsjs/runtime/runtime"
+import { EventsOff, EventsOn } from "../../../../wailsjs/runtime/runtime"
 
 import { parseActionTags, computeIndents } from "../../../utils/action_utils";
 
@@ -109,6 +109,12 @@ onMounted(() => {
   })
 })
 
+onUnmounted(() => {
+  EventsOff("begin-action")
+  EventsOff("now-action")
+  EventsOff("done-action")
+})
+
 
 const selectAction = (action: any) => {
   store.selectedAction = action;
@@ -120,13 +126,13 @@ const selectAction = (action: any) => {
 
 <style>
 .action-card {
-  margin: 5px;
-  box-shadow: 0px 3px 5px #aaaaaa;
+  margin: 1px;
+  box-shadow: 0px 2px 2px #aaaaaa;
 }
 
 .action-item {
   border: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: 2px;
   cursor: pointer;
   transition: border-color 0.2s;
 }

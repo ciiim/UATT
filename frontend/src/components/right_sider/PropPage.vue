@@ -53,7 +53,7 @@
 
               <!-- Fixed -->
               <template v-else-if="mod.ModuleTypeID === 11">
-                <a-form-item label="固定内容 (字节数组)">
+                <a-form-item label="固定内容 (字节数组)" tooltip="填写 -1 跳过内容检查 (发送不可用)">
                   <a-textarea
                     :value="fixedToString(mod.FixedContent)"
                     @blur="(e : any)=> mod.FixedContent = fixedFromString(e.target.value)"
@@ -362,6 +362,26 @@
             </a-form-item>
           </template>
 
+          <!-- Show -->
+          <template v-if="store.selectedAction.ActionTypeID === 92">
+            <a-form-item label="输出目标下标 (按文字框绑定顺序 index:[0-1])">
+              <a-select
+                v-model:value="store.selectedAction.TypeFeatureField.OutputIdx"
+                :options="outputIdxList"
+                placeholder="请选择目标文字框index"
+                style="width: 100%"
+              />
+            </a-form-item>
+            <a-form-item label="打印格式字符串">
+              <a-input
+                v-model:value="store.selectedAction.TypeFeatureField.FmtStr"
+              />
+              <a-button type="link" size="small" @click="showFmtHelp">
+                查看说明
+              </a-button>
+            </a-form-item>
+          </template>
+
           <!-- Delay -->
           <template v-else-if="store.selectedAction.ActionTypeID === 91">
             <a-form-item label="延迟时间(ms)">
@@ -456,6 +476,8 @@ const varTypeOptions = [
   { label: "JSON", value: "JSON" },
 ];
 
+const outputIdxList = [{label: '0', value:0}, {label: '1', value:1}]
+
 watch(
   () => store.selectedAction?.TypeFeatureField,
   (newVal) => {
@@ -538,7 +560,7 @@ const fixedToString = (arr: number[] | undefined): string => {
     .map((n) => {
       // 转成大写十六进制，补零
       const hex = n.toString(16).toUpperCase().padStart(2, "0");
-      return `0x${hex}`; // 加前缀，便于识别
+      return `${hex}`; // 加前缀，便于识别
     })
     .join(",");
 };
@@ -548,7 +570,7 @@ const fixedFromString = (str: any) => {
   if (!str) return [];
   return str
     .split(",")
-    .map((s: any) => parseInt(s))
+    .map((s: any) => parseInt(s, 16))
     .filter((n: any) => !isNaN(n));
 };
 

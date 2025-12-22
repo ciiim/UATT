@@ -26,6 +26,10 @@ export function DoStep() {
   return window['go']['bsd_testtool']['Manager']['DoStep']();
 }
 
+export function ExportViewer() {
+  return window['go']['bsd_testtool']['Manager']['ExportViewer']();
+}
+
 export function GetActionList() {
   return window['go']['bsd_testtool']['Manager']['GetActionList']();
 }

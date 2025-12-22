@@ -1,8 +1,5 @@
 <template>
   <div class="header-toolbar">
-    <div class="left">
-      <!-- 左边内容 -->
-    </div>
     <div class="right">
       <!-- 串口下拉选择 -->
       <a-select
@@ -16,7 +13,7 @@
           {{ port }}
         </a-select-option>
       </a-select>
-      <a-button class="btn" type="primary" @click="onSave">保存</a-button>
+      <a-button class="btn" type="primary"@click="exportButton">导出生成Viewer</a-button>
     </div>
   </div>
 </template>
@@ -28,19 +25,11 @@ import { useActionStore } from "../../../stores/action_store";
 import {
   GetAllSerial,
   SelectSerialCom,
-  Start,
-  Stop,
-  GetAppSettings,
-  SyncAppSettings,
-  SaveApp,
-  SyncActions,
   OpenSerialPort,
-  SaveCanvas,
   CloseSerialPort,
-  GetCanvasData,
+  ExportViewer,
 } from "../../../../wailsjs/go/bsd_testtool/Manager";
 import { bsd_testtool } from "../../../../wailsjs/go/models";
-import { EventsOn } from "../../../../wailsjs/runtime/runtime"
 
 const store = useActionStore();
 
@@ -49,10 +38,13 @@ const addModalVisible = ref(false);
 // 串口列表和选中值
 const serialList = ref<string[]>([]);
 const selectedSerial = ref<string>("");
-const configSettings = ref<bsd_testtool.CanvasConfig>();
+const configSettings = ref<bsd_testtool.AppConfigSettings>(
+  new bsd_testtool.AppConfigSettings()
+);
 
 // 页面加载时获取串口列表
 onMounted(async () => {
+
   
   await GetSerialList()
   if (serialList.value.length > 0) {
@@ -90,6 +82,15 @@ const onSelectSerial = async (port: string) => {
 };
 
 
+const exportButton = async () => {
+  try {
+    let appNum = await ExportViewer()
+    message.info(['生成成功, 收集了', appNum, '个App'])
+  } catch(err) {
+    console.log('Close serial port err:', err);
+  }
+}
+
 const closeSerialPort = async () => {
   nowRunningStatus.value = 2
   try {
@@ -100,25 +101,6 @@ const closeSerialPort = async () => {
   nowRunningStatus.value = 0
 }
 
-
-const onSave = async () => {
-  try {
-    let canvasCfg = new bsd_testtool.CanvasConfig({
-        CanvasName: store.nowCanvas,
-        Data: new bsd_testtool.CanvasData({
-          ComponentList: store.canvasComponents,
-          Connections: store.canvasConnections,
-        }), 
-      })
-      
-      await SaveCanvas(canvasCfg)
-      message.success("保存成功", 1);
-
-  } catch (err) {
-    console.error(err);
-    message.error("保存失败");
-  }
-};
 </script>
 
 <style scoped>

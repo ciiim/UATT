@@ -34,8 +34,8 @@
       :label-col="{ span: 6 }"
       :wrapper-col="{ span: 16 }"
     >
-      <a-form-item label="应用名称" required>
-        <a-input v-model:value="configSettings.AppName" />
+      <a-form-item label="应用名称" >
+        <a-input v-model:value="configSettings.AppName" disabled />
       </a-form-item>
 
       <a-form-item label="串口波特率" required>
@@ -68,15 +68,15 @@
       </a-form-item>
 
       <a-form-item label="启用日志">
-        <a-switch v-model:checked="configSettings.LogEnable" />
+        <a-switch v-model:checked="configSettings.LogEnable" disabled />
       </a-form-item>
 
       <a-form-item label="启用日志导出">
-        <a-switch v-model:checked="configSettings.LogExportEnable" />
+        <a-switch v-model:checked="configSettings.LogExportEnable" disabled />
       </a-form-item>
 
       <a-form-item label="日志导出位置">
-        <a-input v-model:value="configSettings.LogExportLoaction" />
+        <a-input v-model:value="configSettings.LogExportLoaction" disabled />
       </a-form-item>
     </a-form>
   </a-modal>
@@ -84,7 +84,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { message } from "ant-design-vue";
+import { message, notification } from "ant-design-vue";
 import { useActionStore } from "../../../stores/action_store";
 import {
   GetAllSerial,
@@ -184,7 +184,7 @@ const openSetting = () => {
 const handleAddApp = async () => {
   try {
     await SyncAppSettings(configSettings.value);
-    message.success("修改应用成功");
+    message.success("修改应用成功", 1);
     addModalVisible.value = false;
   } catch (err) {
     console.error(err);
@@ -197,11 +197,8 @@ const onSave = async () => {
     console.log("actions:", actionStore.actions);
     // 调用 wails 后端保存
     await SyncActions(actionStore.actions);
-    console.log("step 1");
-    
     
     await SaveApp();
-
     message.success("保存成功", 1);
   } catch (err) {
     console.error(err);

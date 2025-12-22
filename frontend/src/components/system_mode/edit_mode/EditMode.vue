@@ -126,6 +126,7 @@ const actionLibrary = ref([
   },
   { name: "Print", actionID: 90, actionType: "Debug", feat: { PrintFmt: "" } },
   { name: "Delay", actionID: 91, actionType: "Debug", feat: { DelayMs: 0 } },
+  { name: "Show", actionID: 92, actionType: "Debug", feat: { OutputIdx: 0, FmtStr: '' } },
   {
     name: "Label",
     actionID: 28,

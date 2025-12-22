@@ -14,6 +14,8 @@ export function DeleteCanvas(arg1:string):Promise<void>;
 
 export function DoStep():Promise<void>;
 
+export function ExportViewer():Promise<number>;
+
 export function GetActionList():Promise<Array<bsd_testtool.ConfigActionBaseJson>>;
 
 export function GetAllAppName():Promise<Array<string>>;

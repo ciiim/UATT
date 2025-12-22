@@ -25,7 +25,7 @@ var testNumberVar variable = variable{
 var TestActionContext ActionContext = ActionContext{
 	LastActionName:   "Send 11",
 	LastSerialBuffer: []byte{0xAA, 0xFF, 0x01, 0x05, 0x55, 0x55, 0x55},
-	LastExecResult:   errors.New("test error"),
+	LastExecResult:   nil,
 	variableMap: map[string]*variable{
 		"test":       &testVar,
 		"testNumber": &testNumberVar,
@@ -102,7 +102,7 @@ func FmtGetVar(varFmt string, ctx *ActionContext) any {
 	case '2':
 		return func() any {
 			if ctx.LastExecResult == nil {
-				return nil
+				return ""
 			} else {
 				return ctx.LastExecResult.Error()
 			}
@@ -198,6 +198,20 @@ func tokenize(input string) ([]token, error) {
 			continue
 		}
 
+		if ch == '"' {
+			j := i + 1
+			for j < len(input) && input[j] != '"' {
+				j++
+			}
+			if j < len(input) {
+				tokens = append(tokens, token{input[i+1 : j], TokenString})
+				i = j + 1
+				continue
+			} else {
+				return nil, ErrVarNotClosed
+			}
+		}
+
 		// 变量
 		// {0} 上下文里的 LastActionName
 		// {1} 上下文里的 LastSerialBuffer
@@ -274,6 +288,7 @@ const (
 	NodeOp nodeType = iota
 	NodeVar
 	NodeConst
+	NodeConstString
 )
 
 type tokenType int
@@ -289,7 +304,8 @@ const (
 	TokenEq    // ==
 	TokenNotEq // !=
 
-	TokenVar   // {var}
+	TokenVar // {var}
+	TokenString
 	TokenConst // 0x0A | 10
 	TokenLB    // (
 	TokenRB    // )
@@ -343,6 +359,23 @@ func minusOp(lv, rv int) int {
 	return lv - rv
 }
 
+func compareEqString(ls, rs string) bool {
+	return ls == rs
+}
+
+func (a *AstNode) EvalString(ctx *ActionContext, left, right string) (any, error) {
+	// 字符串比较另外实现
+
+	switch a.Value {
+	case "==":
+		return compareEqString(left, right), nil
+	case "!=":
+		return !compareEqString(left, right), nil
+	}
+
+	return nil, fmt.Errorf("unknown type %v", a.Value)
+}
+
 func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 	switch a.Type {
 	case NodeOp:
@@ -359,6 +392,9 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 		lvo := 0
 		rvo := 0
 
+		leftIsString := false
+		rightIsString := false
+
 		// 把所有类型的值都转换成int
 		switch t := lv.(type) {
 		case int:
@@ -374,6 +410,8 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 			lvo = int(t)
 		case uint8:
 			lvo = int(t)
+		case string:
+			leftIsString = true
 		default:
 			return nil, fmt.Errorf("lv unsupport type %V", t)
 		}
@@ -392,8 +430,21 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 			rvo = int(t)
 		case uint8:
 			rvo = int(t)
+		case string:
+			rightIsString = true
 		default:
 			return nil, fmt.Errorf("rv unsupport type %V", t)
+		}
+
+		if leftIsString && !rightIsString {
+			return nil, fmt.Errorf("string cannot compare with other type ")
+		}
+		if !leftIsString && rightIsString {
+			return nil, fmt.Errorf("string cannot compare with other type ")
+		}
+
+		if leftIsString && rightIsString {
+			return a.EvalString(ctx, lv.(string), rv.(string))
 		}
 
 		// 根据运算符做实际运算
@@ -425,12 +476,14 @@ func (a *AstNode) Eval(ctx *ActionContext) (any, error) {
 			return false, err
 		}
 		return n, nil
+	case NodeConstString:
+		return a.Value, nil
 	case NodeVar:
 		// FmtGetVar要求输入varFmt不带{}
 		v := FmtGetVar(a.Value[1:len(a.Value)-1], ctx)
 		switch t := v.(type) {
 		case string:
-			return false, errors.New("node var cannot be string")
+			return t, nil
 		case nil:
 			return nil, fmt.Errorf("wrong var[%v]", a.Value[1:len(a.Value)-1])
 		default:
@@ -596,6 +649,15 @@ func (p *parser) parsePrimary() *AstNode {
 		_ = p.advanceToken()
 		return &AstNode{
 			Type:  NodeConst,
+			Value: value,
+		}
+
+	}
+	if p.nowToken().toType == TokenString {
+		value := p.nowToken().t
+		_ = p.advanceToken()
+		return &AstNode{
+			Type:  NodeConstString,
 			Value: value,
 		}
 	}

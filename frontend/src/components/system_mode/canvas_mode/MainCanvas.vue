@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container" v-if="store.nowCanvas != ''">
     <!-- 左侧组件库 -->
     <div class="sidebar">
       <div
@@ -132,7 +132,6 @@
           <a-select v-model:value="editForm.type" placeholder="请选择类型">
             <a-select-option value="button">按钮</a-select-option>
             <a-select-option value="text">文字框</a-select-option>
-            <a-select-option value="label">标签</a-select-option>
           </a-select>
         </a-form-item>
       </a-form>
@@ -204,6 +203,9 @@
       </a-form>
     </a-modal>
   </div>
+  <div v-else>
+    <h2 style="color: black;">请选择画布</h2>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -213,6 +215,7 @@ import { EditOutlined, DeleteOutlined, LinkOutlined, DisconnectOutlined } from '
 import { GetAllAppName, GetCanvasData, StartCanvasApp } from '../../../../wailsjs/go/bsd_testtool/Manager';
 import { CanvasComponent, Connection } from '../../../types/Canvas';
 import { useActionStore } from "../../../stores/action_store";
+import { EventsOn, EventsOff } from '../../../../wailsjs/runtime/runtime';
 
 const store = useActionStore();
 
@@ -232,8 +235,8 @@ watch(
     GetCanvasData()
       .then((res) => {
         console.log(res);
-        store.canvasComponents = res.Data.ComponentList
-        store.canvasConnections = res.Data.Connections
+        store.canvasComponents = res.Data.ComponentList || []
+        store.canvasConnections = res.Data.Connections || []
       })
       .catch((err) => {
         console.log("错误 " + err);
@@ -253,6 +256,9 @@ const canvasSize = reactive({ width: 800, height: 600 });
 
 // 选中的组件ID
 const selectedComponentId = ref<string | null>(null);
+
+// 运行中的组件ID
+const runningComponentID = ref<string | null>(null);
 
 // 拖动数据缓存
 const dragData = ref<LibraryItem | null>(null);
@@ -377,7 +383,7 @@ const onDrop = (e: DragEvent) => {
   if (newComp.Type === 'text') {
     newComp.Value = '';
   } else if (newComp.Type === 'button') {
-    newComp.AttachApp = 'default';
+    newComp.AttachApp = '';
   }
 
    store.canvasComponents.push(newComp);
@@ -419,47 +425,40 @@ const selectComponent = (comp: CanvasComponent) => {
 
 // 双击处理（按钮执行操作）
 const handleDoubleClick = (comp: CanvasComponent) => {
-  if (comp.Type === 'button') {
+  if (comp.Type === 'button' && comp.AttachApp != '') {
     executeButtonApp(comp);
+  } else {
+    console.log('executeButtonApp failed:', comp);
   }
 };
 
-// ===== 这里是留给你实现的按钮Action接口 =====
 const executeButtonApp = async (buttonComp: CanvasComponent) => {
 
-  const result = performApp(buttonComp.AttachApp || 'default');
-  updateConnectedTextBoxes(buttonComp.ID, result);
+  runningComponentID.value = buttonComp.ID;
   
-  console.log('按钮执行:', buttonComp.Label, '操作类型:', buttonComp.AttachApp);
+  console.log('按钮执行:', buttonComp.Label, '操作App:', buttonComp.AttachApp);
 
   StartCanvasApp(buttonComp.AttachApp!).catch((err)=> {
     message.error(["执行失败", err], 1)
   })
 };
 
-// 示例：执行具体操作（你可以替换这个函数）
-const performApp = (app: string): string => {
-  switch (app) {
-    case 'hello':
-      return 'Hello World!';
-    case 'time':
-      return new Date().toLocaleString();
-    case 'random':
-      return Math.floor(Math.random() * 100).toString();
-    default:
-      return '操作完成';
-  }
-};
-
 // 更新关联的文字框
-const updateConnectedTextBoxes = (buttonId: string, result: string) => {
+const updateConnectedTextBoxes = (buttonId: string, index : number, result: string) => {
   const relatedConnections = store.canvasConnections.filter(c => c.FromID === buttonId);
-  relatedConnections.forEach(conn => {
-    const textComp = store.canvasComponents.find(c => c.ID === conn.ToID);
-    if (textComp) {
-      textComp.Value = result;
-    }
-  });
+  // 验证索引是否有效
+  if (isNaN(index) || index >= relatedConnections.length) {
+    return;
+  }
+  
+  const connection = relatedConnections[index]; // 转换为0基础索引
+  const textComp = store.canvasComponents.find(c => c.ID === connection.ToID);
+  
+  if (textComp) {
+    textComp.Value = result;
+  } else {
+    console.warn(`Text component not found for connection: ${connection.ToID}`);
+  }
 };
 
 
@@ -670,10 +669,17 @@ const canvasRef = ref<HTMLDivElement | null>(null);
 onMounted(() => {
   updateCanvasSize();
   window.addEventListener('resize', updateCanvasSize);
+
+  EventsOn("output_text", (idx, str) => {
+    updateConnectedTextBoxes(runningComponentID.value!, idx, str)
+  })
+
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateCanvasSize);
+
+  EventsOff("output_text")
 });
 </script>
 

@@ -120,6 +120,8 @@ type ActionContext struct {
 	LastActionName   string
 	LastSerialBuffer []byte
 	LastExecResult   error
+
+	engine *ActionEngine
 }
 
 func (ctx *ActionContext) DefaultNextAction() {
@@ -192,6 +194,7 @@ func (a *ActionEngine) PreCompile() error {
 		LastExecResult:   nil,
 		nowActionStatus:  Idle,
 		serial:           &GlobalSerial,
+		engine:           a,
 	}
 
 	a.ctx.log = append(a.ctx.log, getWailsRuntimeLog(a.wailsCtx))

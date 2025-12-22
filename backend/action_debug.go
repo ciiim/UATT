@@ -2,6 +2,8 @@ package bsd_testtool
 
 import (
 	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type PrintAction struct {
@@ -46,5 +48,12 @@ func (d *DelayAction) doAction(ctx *ActionContext) error {
 }
 
 func (s *ShowAction) doAction(ctx *ActionContext) error {
+
+	showStr := FmtSprintf(s.FmtStr, ctx)
+
+	runtime.EventsEmit(ctx.engine.wailsCtx, "output_text", s.OutputIdx, showStr)
+
+	ctx.DefaultNextAction()
+
 	return nil
 }

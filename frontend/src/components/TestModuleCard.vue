@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import {ref } from 'vue';
-import { DeleteOutlined, ClockCircleOutlined, StopOutlined, LineOutlined, MoreOutlined, BranchesOutlined,FontColorsOutlined, EnterOutlined, PrinterOutlined,PlayCircleOutlined, FlagOutlined, SendOutlined, DownloadOutlined, QuestionOutlined } from '@ant-design/icons-vue';
+import { DeleteOutlined, ClockCircleOutlined, StopOutlined, LineOutlined, MoreOutlined, BranchesOutlined,FontColorsOutlined, EnterOutlined, PrinterOutlined,PlayCircleOutlined, FlagOutlined, SendOutlined, DownloadOutlined, QuestionOutlined, RedoOutlined, CalculatorOutlined } from '@ant-design/icons-vue';
 
 import type { ConfigActionBase } from "../types/Action";
 import { useActionStore } from '../stores/action_store';
@@ -90,13 +90,16 @@ const iconList = [
     {actionId: 1, icon: SendOutlined}, // send
     {actionId: 2, icon: DownloadOutlined}, // receive
     {actionId: 90, icon: PrinterOutlined}, // print
+    {actionId: 92, icon: PrinterOutlined}, // show
     {actionId: 91, icon: ClockCircleOutlined}, // delay
     {actionId: 20, icon: EnterOutlined}, // goto
     {actionId: 23, icon: FontColorsOutlined}, // declare
     {actionId: 24, icon: BranchesOutlined}, // if
     {actionId: 25, icon: MoreOutlined}, // else
+    {actionId: 26, icon: RedoOutlined}, // for
     {actionId: 27, icon: LineOutlined}, // endblock
     {actionId: 31, icon: StopOutlined}, // stop
+    {actionId: 32, icon: CalculatorOutlined}, // assign
 
 
 ];

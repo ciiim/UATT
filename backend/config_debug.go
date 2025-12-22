@@ -23,8 +23,8 @@ func (d *DelayActionFeatureField) ToAction() IAction {
 }
 
 type ShowActionFeatureField struct {
-	OutputID int    `json:"OutputID"`
-	FmtStr   string `json:"FmtStr"`
+	OutputIdx int    `json:"OutputIdx"`
+	FmtStr    string `json:"FmtStr"`
 }
 
 func (s *ShowActionFeatureField) ToAction() IAction {

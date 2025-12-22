@@ -373,6 +373,8 @@ func (s *SendAction) doAction(ctx *ActionContext) error {
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Duration(s.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
+	ctx.LastSerialBuffer = b
+
 	sentLength, err := writeWithTimeout(timeoutCtx, ctx.serial, b)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -469,7 +471,7 @@ func (r *ReceiveAction) doAction(ctx *ActionContext) error {
 
 	uid, err := CheckReceiveBytesArray(r, ctx, modCtx)
 	if err != nil {
-		ctx.SetController(&EnginControllor{nextUID: StopUID})
+		ctx.SetController(&defaultNextControl)
 		return fmt.Errorf("check failed:%s, uid:%d", err, uid)
 	}
 

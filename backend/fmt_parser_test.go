@@ -12,7 +12,7 @@ func TestFmtParse(t *testing.T) {
 }
 
 func TestTokenize(t *testing.T) {
-	res, err := bsd_testtool.TestTokenize("({varA}== 0x01 || {varB} > 1) && 1 != 1")
+	res, err := bsd_testtool.TestTokenize("\"111\" == \"222\"")
 	if err != nil {
 		t.Error(err)
 		return
@@ -21,6 +21,27 @@ func TestTokenize(t *testing.T) {
 	for _, token := range res {
 		t.Logf("token:[%v]\n", token)
 	}
+}
+
+func TestStringCompare(t *testing.T) {
+	str := "{2} == \"\""
+
+	p := bsd_testtool.NewParser(str)
+
+	t.Logf("parser: %v\n", p)
+
+	ast := p.GetAST()
+
+	t.Logf("ast: %v\n", ast)
+
+	ast.Pretty("", true)
+
+	is, err := ast.Eval(&bsd_testtool.TestActionContext)
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Printf("is: %v\n", is)
 }
 
 func TestAdd(t *testing.T) {
